@@ -16,11 +16,40 @@ at the beginning of the file. All other rights are reserved.
 '''
 import numpy as np
 # import matplotlib.pyplot as plt
-from scipy import special, signal, stats, ndimage
-from scipy.integrate import quad
+from scipy import special, signal, ndimage
+# from scipy.interpolate import RectBivariateSpline, interp2d
+# from scipy.integrate import quad
+from cap_quadva import quadva
+from time import time, localtime, strftime
 from warnings import simplefilter
 
 simplefilter('ignore', RuntimeWarning)
+
+
+def bilinear_interpolate(xv, yv, im, xout, yout, fill_value=0):
+    """
+    The input array has size im[ny,nx] as in the output
+    of im = f(meshgrid(xv, yv))
+    xv and yv are vectors of size nx and ny respectively.
+    map_coordinates is equivalent to IDL's INTERPOLATE.
+
+    """
+    ny, nx = np.shape(im)
+    if (nx, ny) != (xv.size, yv.size):
+        raise ValueError("Input arrays dimensions do not match")
+
+    xi = (nx-1.)/(xv[-1] - xv[0]) * (xout - xv[0])
+    yi = (ny-1.)/(yv[-1] - yv[0]) * (yout - yv[0])
+
+    return ndimage.map_coordinates(im.T, [xi, yi], cval=fill_value, order=1)
+
+
+def _mge_surf(mge2d, x, y):
+    rst = 0.0
+    for i in range(mge2d.shape[0]):
+        rst += mge2d[i, 0] * np.exp(-0.5/mge2d[i, 1]**2 *
+                                    (x**2 + (y/mge2d[i, 2])**2))
+    return rst
 
 
 def _powspace(xmin, xmax, num, index=0.5):
@@ -133,12 +162,19 @@ def _wvrms2(x_pc, y_pc, inc, lum3d_pc, pot3d_pc, beta, tensor):
             length as x_pc)
     '''
     wvrms2 = np.empty_like(x_pc)
-    for i in range(x_pc.shape):
+    for i in range(len(x_pc)):
+        '''
+        lhy: Change _integrand function to enable scipy integration!
         wvrms2[i] = quad(_integrand, 0.0, 1.0,
                          args=(lum3d_pc[:, 0], lum3d_pc[:, 1],
                                lum3d_pc[:, 2], pot3d_pc[:, 0],
                                pot3d_pc[:, 1], pot3d_pc[:, 2],
                                x_pc[i], y_pc[i], inc, beta, tensor))
+        '''
+        wvrms2[i] = quadva(_integrand, [0., 1.],
+                           args=(lum3d_pc[:, 0], lum3d_pc[:, 1], lum3d_pc[:, 2],
+                                 pot3d_pc[:, 0], pot3d_pc[:, 1], pot3d_pc[:, 2],
+                                 x_pc[i], y_pc[i], inc, beta, tensor))[0]
     # lhy This could be translated to c
     return wvrms2
 
@@ -169,7 +205,7 @@ def _psf(xbin, ybin, pixSize, sigmaPsf, step):
     ny = np.ceil(ymax/step)
     x1 = np.linspace(-nx, nx, 2*nx+1)*step
     y1 = np.linspace(-ny, ny, 2*ny+1)*step
-    xCar, yCar = np.meshgrid(x1, y1, indexing='ij')
+    xCar, yCar = np.meshgrid(x1, y1, indexing='xy')
 
     nk = np.ceil(mx/step)
     kgrid = np.linspace(-nk, nk, 2*nk+1)*step
@@ -179,18 +215,42 @@ def _psf(xbin, ybin, pixSize, sigmaPsf, step):
     kernel = (special.erf((dx-xgrid)/sp) + special.erf((dx+xgrid)/sp)) \
         * (special.erf((dx-ygrid)/sp) + special.erf((dx+ygrid)/sp))
     kernel /= np.sum(kernel)
-    return xCar, yCar, kernel, mx
+    return x1, y1, xCar, yCar, kernel, mx
+
+
+def _deprojection(mge2d, inc, shape):
+    mge3d = np.zeros_like(mge2d)
+    if shape == 'oblate':
+        qintr_lum = mge2d[:, 2]**2 - np.cos(inc)**2
+        if np.any(qintr_lum <= 0):
+            raise RuntimeError('Inclination too low q < 0')
+        qintr_lum = np.sqrt(qintr_lum)/np.sin(inc)
+        if np.any(qintr_lum < 0.05):
+            raise RuntimeError('q < 0.05 components')
+        dens_lum = mge2d[:, 0]*mge2d[:, 2] /\
+            (mge2d[:, 1]*qintr_lum*np.sqrt(2*np.pi))
+        mge3d[:, 0] = dens_lum
+        mge3d[:, 1] = mge2d[:, 1]
+        mge3d[:, 2] = qintr_lum
+    if shape == 'prolate':
+        print 'Not implemented yet'
+        exit()
+        pass
+    return mge3d
 
 
 class jam:
     '''
+    Main calss for JAM modelling
     '''
     def __init__(self, lum, pot, distance, xbin, ybin, mbh=None, rms=None,
                  erms=None, goodbins=None, sigmapsf=0.0, pixsize=0.0,
                  step=None, nrad=20, nang=10, rbh=0.01, tensor='zz',
                  index=0.5, shape='oblate', quiet=False, **kwargs):
         '''
-        lum, pot: N*3 mge coefficients arrays for tracer and potential
+        lum, pot: N*3 mge coefficients arrays for tracer density and
+                  luminous matter potential (dark matter potential
+                  should be provided when calling run method)
         distance: distance in Mpc
         xbin, ybin: coordinates in arcseconds at which one wants to compute the
                     model predictions (x must be aligned with the major axis)
@@ -242,21 +302,26 @@ class jam:
             if not (xbin.size == rms.size == erms.size == goodbins.size):
                 raise ValueError("(rms, erms, goodbins) and (xbin, ybin)"
                                  " do not match")
-            if step is None:
-                step = max(pixsize/2.0, np.min(sigmapsf))/4.0
-            # Characteristic MGE axial ratio in observed range
-            w = lum[:, 2] < np.max(np.abs(xbin))
-            if w.sum() < 3:
-                qmed = np.median(lum[:, 2])
-            else:
-                qmed = np.median(lum[w, 2])
-            nx = nrad
-            ny = int(nx*qmed) if int(nx*qmed) > 10 else 10
-            self.psfConvolution = (sigmapsf > 0.0) and (pixsize > 0.0)
-            self.interpolation = self.psfConvolution or (len(xbin) > nx*ny)
-            if shape not in ['oblate', 'prolate']:
-                raise ValueError("Shape({}) must be oblate or prolate"
-                                 .format(shape))
+
+        if step is None:
+            step = max(pixsize/2.0, np.min(sigmapsf))/4.0
+        # Characteristic MGE axial ratio in observed range
+        w = lum[:, 2] < np.max(np.abs(xbin))
+        if w.sum() < 3:
+            qmed = np.median(lum[:, 2])
+        else:
+            qmed = np.median(lum[w, 2])
+        nx = nrad
+        ny = int(nx*qmed) if int(nx*qmed) > 10 else 10
+        self.psfConvolution = (sigmapsf > 0.0) and (pixsize > 0.0)
+        self.interpolation = self.psfConvolution or (len(xbin) > nx*ny)
+
+        if shape not in ['oblate', 'prolate']:
+            raise ValueError("Shape({}) must be oblate or prolate"
+                             .format(shape))
+
+        self.Index = index
+        self.tensor = tensor
         # Constant factor to convert arcsec --> pc
         self.pc = distance*np.pi/0.648
         self.lum = lum
@@ -267,28 +332,42 @@ class jam:
         self.lum_pc[:, 1] *= self.pc
         self.pot_pc = pot.copy()
         self.pot_pc[:, 1] *= self.pc
+        # self.lum3d_pc = np.zeros_likd(self.lum_pc)
+        # self.pot3d_pc = np.zeros_likd(self.pot_pc)
         self.xbin = xbin
         self.ybin = ybin
+
         if shape == 'oblate':
             self.xbin_pc = xbin*self.pc
             self.ybin_pc = ybin*self.pc
         if shape == 'prolate':
             self.xbin_pc = ybin*self.pc  # rotate 90 degree if prolate
             self.ybin_pc = -xbin*self.pc
-
-        # add black hole
+            temn = nx
+            nx = ny
+            ny = temn
+        self.xbin_pcIndex = abs(self.xbin_pc)**self.Index
+        self.ybin_pcIndex = abs(self.ybin_pc)**self.Index
+        self.shape = shape
+        # black hole mge
         if mbh is not None:
             sigmaBH_pc = rbh*self.pc
-            surfBH_pc = mbh/(2*np.pi*sigmaBH_pc**2)
-            mge_bh = np.array([surfBH_pc, sigmaBH_pc, 0.999]).reshape(1, 3)
-            self.pot = np.append(mge_bh, self.pot, axis=0)
+            densBH_pc = mbh/(np.sqrt(2*np.pi)*sigmaBH_pc)**3
+            self.mge_bh = np.array([densBH_pc, sigmaBH_pc, 0.999]).reshape(1, 3)
+        else:
+            self.mge_bh = None
 
         if self.psfConvolution:
-            self.xCar, self.yCar, self.kernel, self.mx =\
-                _psf(self.xbin_pc/self.pc, self.ybin_pc/self.pc,
-                     pixsize, sigmapsf, step)
+            self.xcar, self.ycar, self.xCar, self.yCar,\
+                self.kernel, self.mx = _psf(self.xbin_pc/self.pc,
+                                            self.ybin_pc/self.pc,
+                                            pixsize, sigmapsf, step)
             self.xCar *= self.pc
             self.yCar *= self.pc
+            self.xcar *= self.pc
+            self.ycar *= self.pc
+            self.xCarIndex = abs(self.xCar)**self.Index
+            self.yCarIndex = abs(self.yCar)**self.Index
         else:
             self.mx = 0.0
 
@@ -297,11 +376,78 @@ class jam:
             ymax = (abs(self.ybin_pc).max() + self.mx) * 1.01
             # Linear grid in np.log(rell)
 
-            xgrid = _powspace(0.0, xmax, nx, index=index)
-            ygrid = _powspace(0.0, ymax, ny, index=index)
+            self.xgrid = _powspace(0.0, xmax, nx, index=index)
+            self.ygrid = _powspace(0.0, ymax, ny, index=index)
+            self.xgridIndex = self.xgrid**self.Index
+            self.ygridIndex = self.ygrid**self.Index
             # Linear grid in eccentric anomaly
             self.xGrid, self.yGrid = \
-                map(np.ravel, np.meshgrid(xgrid, ygrid))
-
+                map(np.ravel, np.meshgrid(self.xgrid, self.ygrid,
+                                          indexing='xy'))
+            self.xGirdIndex = self.xGrid**self.Index
+            self.yGirdIndex = self.yGrid**self.Index
         if not quiet:
             print 'Initialize success!'
+
+    def run(self, inc_deg, beta, mge_dh=None, ml=1.0):
+        '''
+        mge_dh: dark halo mge, N*3 array
+        ml: stellar mass-to-light ratio. self.pot will be scaled by this factor,
+            but dhmge will not be scaled!
+        '''
+        start_time = time()
+        inc = np.radians(inc_deg)
+        # deprojection
+        self.lum3d_pc = _deprojection(self.lum_pc, inc, self.shape)
+        self.pot3d_pc = _deprojection(self.pot_pc, inc, self.shape)
+
+        if self.mge_bh is not None:
+            self.pot3d_pc = np.append(self.mge_bh, self.pot3d_pc, axis=0)
+        if mge_dh is not None:
+            self.pot3d_pc = np.append(self.pot3d_pc, mge_dh, axis=0)
+        # print self.xbin_pc, self.ybin_pc, inc, self.lum3d_pc, self.pot3d_pc,\
+        #     beta, self.tensor
+        if not self.interpolation:
+            wvrms2 = _wvrms2(self.xbin_pc, self.ybin_pc, inc, self.lum3d_pc,
+                             self.pot3d_pc, beta, self.tensor)
+            surf = _mge_surf(self.lum_pc, self.xbin_pc, self.ybin_pc)
+            self.rmsModel = np.sqrt(wvrms2/surf*ml)
+            print time() - start_time
+            return self.rmsModel
+        else:
+            wvrms2 = _wvrms2(self.xGrid, self.yGrid, inc, self.lum3d_pc,
+                             self.pot3d_pc, beta, self.tensor)
+            surf = _mge_surf(self.lum_pc, self.xGrid, self.yGrid)
+            if not self.psfConvolution:
+                print 'nopsf interp'
+                # interpolate to the input xbin,ybin
+                # print self.xGrid.reshape(len(self.ygrid), len(self.xgrid))
+                # print self.ygrid
+                tem = np.sqrt((wvrms2/surf*ml).reshape(len(self.ygrid),
+                                                       len(self.xgrid)))
+                self.rmsModel =\
+                    bilinear_interpolate(self.xgridIndex, self.ygridIndex, tem,
+                                         self.xbin_pcIndex, self.ybin_pcIndex)
+                print time() - start_time
+                return self.rmsModel
+            else:
+                print 'PSF!'
+                tem_wvrms2 = wvrms2.reshape(len(self.ygrid), len(self.xgrid))
+                tem_surf = surf.reshape(len(self.ygrid), len(self.xgrid))
+                wvrms2Car = \
+                    bilinear_interpolate(self.xgridIndex, self.ygridIndex,
+                                         tem_wvrms2, self.xCarIndex,
+                                         self.yCarIndex)
+                surfCar = bilinear_interpolate(self.xgridIndex, self.ygridIndex,
+                                               tem_surf, self.xCarIndex,
+                                               self.yCarIndex)
+                wvrms2Car_psf = signal.fftconvolve(wvrms2Car, self.kernel,
+                                                   mode='same')
+                surfCar_psf = signal.fftconvolve(surfCar, self.kernel,
+                                                 mode='same')
+                tem = np.sqrt(wvrms2Car_psf/surfCar_psf*ml)
+                self.rmsModel =\
+                    bilinear_interpolate(self.xcar, self.ycar, tem,
+                                         self.xbin_pc, self.ybin_pc)
+                print time() - start_time
+                return self.rmsModel
