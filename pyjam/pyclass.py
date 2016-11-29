@@ -221,21 +221,26 @@ def _psf(xbin, ybin, pixSize, sigmaPsf, step):
 def _deprojection(mge2d, inc, shape):
     mge3d = np.zeros_like(mge2d)
     if shape == 'oblate':
-        qintr_lum = mge2d[:, 2]**2 - np.cos(inc)**2
-        if np.any(qintr_lum <= 0):
+        qintr = mge2d[:, 2]**2 - np.cos(inc)**2
+        if np.any(qintr <= 0):
             raise RuntimeError('Inclination too low q < 0')
-        qintr_lum = np.sqrt(qintr_lum)/np.sin(inc)
-        if np.any(qintr_lum < 0.05):
+        qintr = np.sqrt(qintr)/np.sin(inc)
+        if np.any(qintr < 0.05):
             raise RuntimeError('q < 0.05 components')
-        dens_lum = mge2d[:, 0]*mge2d[:, 2] /\
-            (mge2d[:, 1]*qintr_lum*np.sqrt(2*np.pi))
-        mge3d[:, 0] = dens_lum
+        dens = mge2d[:, 0]*mge2d[:, 2] /\
+            (mge2d[:, 1]*qintr*np.sqrt(2*np.pi))
+        mge3d[:, 0] = dens
         mge3d[:, 1] = mge2d[:, 1]
-        mge3d[:, 2] = qintr_lum
+        mge3d[:, 2] = qintr
     if shape == 'prolate':
-        print 'Not implemented yet'
-        exit()
-        pass
+        qintr = np.sqrt(1.0/mge2d[:, 2]**2 - np.cos(inc)**2)/np.sin(inc)
+        if np.any(qintr > 10):
+            raise RuntimeError('q > 10.0 conponents')
+        sigmaintr = mge2d[:, 1]*mge2d[:, 2]
+        dens = mge2d[:, 0] / (np.sqrt(2*np.pi)*mge2d[:, 1]*mge2d[:, 2]**2*qintr)
+        mge3d[:, 0] = dens
+        mge3d[:, 1] = sigmaintr
+        mge3d[:, 2] = qintr
     return mge3d
 
 
@@ -326,8 +331,8 @@ class jam:
         self.pc = distance*np.pi/0.648
         self.lum = lum
         self.pot = pot
-        self.lum[:, 2] = self.lum[:, 2].clip(0, 0.999)
-        self.pot[:, 2] = self.pot[:, 2].clip(0, 0.999)
+        self.lum[:, 2] = self.lum[:, 2]
+        self.pot[:, 2] = self.pot[:, 2]
         self.lum_pc = lum.copy()
         self.lum_pc[:, 1] *= self.pc
         self.pot_pc = pot.copy()
@@ -408,9 +413,11 @@ class jam:
         # print self.xbin_pc, self.ybin_pc, inc, self.lum3d_pc, self.pot3d_pc,\
         #     beta, self.tensor
         if not self.interpolation:
+            print self.lum3d_pc
             wvrms2 = _wvrms2(self.xbin_pc, self.ybin_pc, inc, self.lum3d_pc,
                              self.pot3d_pc, beta, self.tensor)
             surf = _mge_surf(self.lum_pc, self.xbin_pc, self.ybin_pc)
+            print wvrms2
             self.rmsModel = np.sqrt(wvrms2/surf*ml)
             print time() - start_time
             return self.rmsModel

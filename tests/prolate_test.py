@@ -42,7 +42,7 @@ def test_jam_axi_rms():
 
     distance = 16.5   # Assume Virgo distance in Mpc (Mei et al. 2007)
     mbh = 1e8  # Black hole mass in solar masses
-    beta = np.full_like(surf, 0.3)
+    beta = np.full_like(surf, 0.6)
 
     lum_mge = np.zeros([len(surf), 3])
     lum_mge[:, 0] = surf
@@ -56,12 +56,14 @@ def test_jam_axi_rms():
     # Arbitrarily exclude the center to illustrate how to use goodbins
     lhy = pyjam.pyclass.jam(lum_mge, pot_mge, distance, xbin, ybin, mbh=mbh,
                             rms=rms, goodbins=goodbins, sigmapsf=sigmapsf,
-                            pixsize=pixsize, shape='prolate', nrad=30, index=0.5)
-
-
+                            pixsize=pixsize, shape='prolate', nrad=30000,
+                            index=0.5)
+    # tem = lhy.xbin_pc
+    # lhy.xbin_pc = -lhy.ybin_pc
+    # lhy.ybin_pc = tem
     rmsModel = lhy.run(inc, beta)
-    '''
-    xbinC, ybinC, rmsModelC, mlC = np.load('Cappellair_oblate.npy')
+    # print rmsModel
+    xbinC, ybinC, rmsModelC, mlC = np.load('Cappellair_spherical.npy')
     fig = plt.figure()
     vmin, vmax = stats.scoreatpercentile(rmsModelC, [0.5, 99.5])
     norm = colors.Normalize(vmin=(vmin), vmax=(vmax))
@@ -85,7 +87,6 @@ def test_jam_axi_rms():
     ax4.text(0.05, 0.65, 'MC-LHY',
              transform=ax4.transAxes, fontproperties=text_font)
     plt.show()
-    '''
 
 if __name__ == '__main__':
     test_jam_axi_rms()
