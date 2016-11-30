@@ -15,10 +15,7 @@ at the beginning of the file. All other rights are reserved.
 #############################################################################
 '''
 import numpy as np
-# import matplotlib.pyplot as plt
 from scipy import special, signal, ndimage
-# from scipy.interpolate import RectBivariateSpline, interp2d
-# from scipy.integrate import quad
 from cap_quadva import quadva
 from time import time, localtime, strftime
 from warnings import simplefilter
@@ -143,7 +140,7 @@ def _integrand(u1,
         / ((1. - c*u2)*np.sqrt((1. - e2u2_pot)*e))
 
     G = 0.00430237    # (km/s)^2 pc/Msun [6.674e-11 SI units (CODATA-10)]
-    # lhy: 4*np.pi**1.5*G should not be here! This function has c version.
+    # lhy: This function has c version.
     return 4*np.pi**1.5*G*np.sum(arr, axis=(0, 1))
 
 
@@ -183,12 +180,13 @@ def _psf(xbin, ybin, pixSize, sigmaPsf, step):
     '''
     calculate kernal and grid for psf, see equation (A6) of Cappellari (2008)
     --input parameters
-    xbin, ybin: x, y position in arcsec for the polar grid, on which wvrms2 are
-                calculated
-    pixSize: Fiber size for IFU data (MaNGA - 2.0 arcsec)
-    sigmaPsf: Gaussian sigma for psf (MaNGA ~ 1.0 - 1.5 )
+    xbin, ybin: x, y position in arcsec for the interpolation grid, on which
+                wvrms2 are calculated
+    pixSize: Fiber size for IFU data
+    sigmaPsf: Gaussian sigma for psf
     --output paramters
-    xCar, yCar: grid positon in arcsec for psf (wvrms2 needed on this grid)
+    x1(y1): nx(ny) array
+    xCar(yCar): grid positon in arcsec for psf (ny*nx)
     kernel: psf kernel
     '''
 
@@ -219,6 +217,11 @@ def _psf(xbin, ybin, pixSize, sigmaPsf, step):
 
 
 def _deprojection(mge2d, inc, shape):
+    '''
+    deproject the 2d mges to 3d, using different fomula for different shape.
+    mge2d: 2d mges
+    inc: inclination in rad
+    '''
     mge3d = np.zeros_like(mge2d)
     if shape == 'oblate':
         qintr = mge2d[:, 2]**2 - np.cos(inc)**2
@@ -250,25 +253,27 @@ class jam:
     '''
     def __init__(self, lum, pot, distance, xbin, ybin, mbh=None, rms=None,
                  erms=None, goodbins=None, sigmapsf=0.0, pixsize=0.0,
-                 step=None, nrad=20, nang=10, rbh=0.01, tensor='zz',
+                 step=None, nrad=25, nang=10, rbh=0.01, tensor='zz',
                  index=0.5, shape='oblate', quiet=False, **kwargs):
         '''
-        lum, pot: N*3 mge coefficients arrays for tracer density and
-                  luminous matter potential (dark matter potential
-                  should be provided when calling run method)
+        lum, pot: N*3 mge coefficients arrays for tracer density and luminous
+                  matter potential (dark matter potential should be provided
+                  separately when calling the run method). Usually lum=pot
+                  if there is no stellar mass-to-light ratio gradient.
         distance: distance in Mpc
-        xbin, ybin: coordinates in arcseconds at which one wants to compute the
-                    model predictions (x must be aligned with the major axis)
+        xbin, ybin: coordinates in arcsec at which one wants to compute the
+                    model predictions (x must be aligned with the major axis
+                    for both oblate and prolate model)
         mbh: blackhole mass in M_solar
         rms: observed root-mean-squared velocities
         erms: error of rms, if None, 5% constant error will be assumed.
         goodbins: good bins used in calculate chi2, bool array
-        sigmapsf: gaussian psf in arcsec
-        pixsize: IFU fibersize
+        sigmapsf: gaussian psf in arcsec (MaNGA ~ 1.0 - 1.5 )
+        pixsize: IFU fibersize (MaNGA - 2.0 arcsec)
         step: kernel and psf grid step
         nrad: number of grid in x axis
         nang: not used in this version
-        rbh: blackhole mge sigma
+        rbh: blackhole mge sigma (do not change this parameter if unnecessary)
         tensor: moments to be calculated, zz for LOS
         index: _powspace parameter, see _powspace() function
         shape: luminous matter shape
@@ -341,6 +346,9 @@ class jam:
         # self.pot3d_pc = np.zeros_likd(self.pot_pc)
         self.xbin = xbin
         self.ybin = ybin
+        self.goodbins = goodbins
+        self.rms = rms
+        self.erms = erms
 
         if shape == 'oblate':
             self.xbin_pc = xbin*self.pc
@@ -379,13 +387,11 @@ class jam:
         if self.interpolation:
             xmax = (abs(self.xbin_pc).max() + self.mx) * 1.01
             ymax = (abs(self.ybin_pc).max() + self.mx) * 1.01
-            # Linear grid in np.log(rell)
 
             self.xgrid = _powspace(0.0, xmax, nx, index=index)
             self.ygrid = _powspace(0.0, ymax, ny, index=index)
             self.xgridIndex = self.xgrid**self.Index
             self.ygridIndex = self.ygrid**self.Index
-            # Linear grid in eccentric anomaly
             self.xGrid, self.yGrid = \
                 map(np.ravel, np.meshgrid(self.xgrid, self.ygrid,
                                           indexing='xy'))
@@ -393,15 +399,27 @@ class jam:
             self.yGirdIndex = self.yGrid**self.Index
         if not quiet:
             print 'Initialize success!'
+            print 'Model shape: {}'.format(self.shape)
+            print 'Interpolation: {}'.format(self.interpolation)
+            if self.interpolation:
+                print 'Interpolation grid: {}*{}'.format(nx, ny)
+                print 'Interpolation size: {:.1f}*{:.1f}'\
+                    .format(xmax/self.pc, ymax/self.pc)
+            print 'psfConvolution: {}'.format(self.psfConvolution)
+            if self.psfConvolution:
+                print 'sigmaPSF, pixSize: {:.2f}, {:.2f}'.format(sigmapsf,
+                                                                 pixsize)
 
-    def run(self, inc_deg, beta, mge_dh=None, ml=1.0):
+    def run(self, inc, beta, mge_dh=None, ml=1.0):
         '''
+        inc: inclination in radian
+        beta: anisotropy parameter, lenth n array (n=Number of luminous
+              Gaussian)
         mge_dh: dark halo mge, N*3 array
         ml: stellar mass-to-light ratio. self.pot will be scaled by this factor,
-            but dhmge will not be scaled!
+            but mge_dh and black halo mge will not be scaled!
         '''
-        start_time = time()
-        inc = np.radians(inc_deg)
+
         # deprojection
         self.lum3d_pc = _deprojection(self.lum_pc, inc, self.shape)
         self.pot3d_pc = _deprojection(self.pot_pc, inc, self.shape)
@@ -410,35 +428,29 @@ class jam:
             self.pot3d_pc = np.append(self.mge_bh, self.pot3d_pc, axis=0)
         if mge_dh is not None:
             self.pot3d_pc = np.append(self.pot3d_pc, mge_dh, axis=0)
-        # print self.xbin_pc, self.ybin_pc, inc, self.lum3d_pc, self.pot3d_pc,\
-        #     beta, self.tensor
         if not self.interpolation:
-            print self.lum3d_pc
             wvrms2 = _wvrms2(self.xbin_pc, self.ybin_pc, inc, self.lum3d_pc,
                              self.pot3d_pc, beta, self.tensor)
             surf = _mge_surf(self.lum_pc, self.xbin_pc, self.ybin_pc)
-            print wvrms2
             self.rmsModel = np.sqrt(wvrms2/surf*ml)
-            print time() - start_time
+            if self.tensor in ('xy', 'xz'):
+                self.rmsModel *= np.sign(self.xbin_pc*self.ybin_pc)
             return self.rmsModel
         else:
             wvrms2 = _wvrms2(self.xGrid, self.yGrid, inc, self.lum3d_pc,
                              self.pot3d_pc, beta, self.tensor)
             surf = _mge_surf(self.lum_pc, self.xGrid, self.yGrid)
             if not self.psfConvolution:
-                print 'nopsf interp'
                 # interpolate to the input xbin,ybin
-                # print self.xGrid.reshape(len(self.ygrid), len(self.xgrid))
-                # print self.ygrid
                 tem = np.sqrt((wvrms2/surf*ml).reshape(len(self.ygrid),
                                                        len(self.xgrid)))
                 self.rmsModel =\
                     bilinear_interpolate(self.xgridIndex, self.ygridIndex, tem,
                                          self.xbin_pcIndex, self.ybin_pcIndex)
-                print time() - start_time
+                if self.tensor in ('xy', 'xz'):
+                    self.rmsModel *= np.sign(self.xbin_pc*self.ybin_pc)
                 return self.rmsModel
             else:
-                print 'PSF!'
                 tem_wvrms2 = wvrms2.reshape(len(self.ygrid), len(self.xgrid))
                 tem_surf = surf.reshape(len(self.ygrid), len(self.xgrid))
                 wvrms2Car = \
@@ -456,5 +468,6 @@ class jam:
                 self.rmsModel =\
                     bilinear_interpolate(self.xcar, self.ycar, tem,
                                          self.xbin_pc, self.ybin_pc)
-                print time() - start_time
+                if self.tensor in ('xy', 'xz'):
+                    self.rmsModel *= np.sign(self.xbin_pc*self.ybin_pc)
                 return self.rmsModel

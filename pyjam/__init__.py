@@ -1,3 +1,2 @@
-import pyclass
-import pyfunction
-__all__ = ['pyclass', 'pyfunction']
+import axi_rms
+__all__ = ['axi_rms' ]

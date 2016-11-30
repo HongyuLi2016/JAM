@@ -22,11 +22,12 @@ def set_tick(ax, font=None):
 
 
 def test_jam_axi_rms():
+    '-----------------------------prepare data--------------------------'
     np.random.seed(123)
     xbin, ybin = np.random.uniform(low=[-55, -40],
                                    high=[55, 40], size=[1000, 2]).T
 
-    inc = 60.   # Assumed galaxy inclination
+    inc = np.radians(60.0)   # Assumed galaxy inclination
     r = np.sqrt(xbin**2 + (ybin/np.cos(np.radians(inc)))**2)
     # Radius in the plane of the disk
     a = 40  # Scale length in arcsec
@@ -53,12 +54,13 @@ def test_jam_axi_rms():
     sigmapsf = 0.0
     pixsize = 0.8
     goodbins = r > 10
-    # Arbitrarily exclude the center to illustrate how to use goodbins
-    lhy = pyjam.pyclass.jam(lum_mge, pot_mge, distance, xbin, ybin, mbh=mbh,
+    '-----------------------------call JAM model------------------------------'
+    lhy = pyjam.axi_rms.jam(lum_mge, pot_mge, distance, xbin, ybin, mbh=mbh,
                             rms=rms, goodbins=goodbins, sigmapsf=sigmapsf,
                             pixsize=pixsize, shape='oblate', nrad=30, index=0.5)
     rmsModel = lhy.run(inc, beta)
     xbinC, ybinC, rmsModelC, mlC = np.load('Cappellair_oblate.npy')
+    '-----------------------------plot figures-------------------------------'
     fig = plt.figure()
     vmin, vmax = stats.scoreatpercentile(rmsModelC, [0.5, 99.5])
     norm = colors.Normalize(vmin=(vmin), vmax=(vmax))
