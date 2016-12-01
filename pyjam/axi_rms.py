@@ -41,11 +41,16 @@ def bilinear_interpolate(xv, yv, im, xout, yout, fill_value=0):
     return ndimage.map_coordinates(im.T, [xi, yi], cval=fill_value, order=1)
 
 
-def _mge_surf(mge2d, x, y):
+def _mge_surf(mge2d, x, y, shape='oblate'):
     rst = 0.0
-    for i in range(mge2d.shape[0]):
-        rst += mge2d[i, 0] * np.exp(-0.5/mge2d[i, 1]**2 *
-                                    (x**2 + (y/mge2d[i, 2])**2))
+    if shape == 'oblate':
+        for i in range(mge2d.shape[0]):
+            rst += mge2d[i, 0] * np.exp(-0.5/mge2d[i, 1]**2 *
+                                        (x**2 + (y/mge2d[i, 2])**2))
+    if shape == 'prolate':
+        for i in range(mge2d.shape[0]):
+            rst += mge2d[i, 0] * np.exp(-0.5/mge2d[i, 1]**2 *
+                                        ((-y)**2 + (x/mge2d[i, 2])**2))
     return rst
 
 
@@ -415,7 +420,7 @@ class jam:
         inc: inclination in radian
         beta: anisotropy parameter, lenth n array (n=Number of luminous
               Gaussian)
-        mge_dh: dark halo mge, N*3 array
+        mge_dh: dark halo mge, N*3 array  [M_solar/pc^3]  [pc]  [none]
         ml: stellar mass-to-light ratio. self.pot will be scaled by this factor,
             but mge_dh and black halo mge will not be scaled!
         '''
@@ -431,7 +436,9 @@ class jam:
         if not self.interpolation:
             wvrms2 = _wvrms2(self.xbin_pc, self.ybin_pc, inc, self.lum3d_pc,
                              self.pot3d_pc, beta, self.tensor)
-            surf = _mge_surf(self.lum_pc, self.xbin_pc, self.ybin_pc)
+            surf = _mge_surf(self.lum_pc, self.xbin_pc,
+                             self.ybin_pc, shape=self.shape)
+            self.flux = surf
             self.rmsModel = np.sqrt(wvrms2/surf*ml)
             if self.tensor in ('xy', 'xz'):
                 self.rmsModel *= np.sign(self.xbin_pc*self.ybin_pc)
@@ -439,9 +446,10 @@ class jam:
         else:
             wvrms2 = _wvrms2(self.xGrid, self.yGrid, inc, self.lum3d_pc,
                              self.pot3d_pc, beta, self.tensor)
-            surf = _mge_surf(self.lum_pc, self.xGrid, self.yGrid)
+            surf = _mge_surf(self.lum_pc, self.xGrid,
+                             self.yGrid, shape=self.shape)
             if not self.psfConvolution:
-                # interpolate to the input xbin,ybin
+                # interpolate to the input xbin, ybin
                 tem = np.sqrt((wvrms2/surf*ml).reshape(len(self.ygrid),
                                                        len(self.xgrid)))
                 self.rmsModel =\
@@ -468,6 +476,8 @@ class jam:
                 self.rmsModel =\
                     bilinear_interpolate(self.xcar, self.ycar, tem,
                                          self.xbin_pc, self.ybin_pc)
+                self.flux = _mge_surf(self.lum_pc, self.xbin_pc,
+                                      self.ybin_pc, shape=self.shape)
                 if self.tensor in ('xy', 'xz'):
                     self.rmsModel *= np.sign(self.xbin_pc*self.ybin_pc)
                 return self.rmsModel
