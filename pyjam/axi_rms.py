@@ -47,7 +47,7 @@ def _mge_surf(mge2d, x, y, shape='oblate'):
         for i in range(mge2d.shape[0]):
             rst += mge2d[i, 0] * np.exp(-0.5/mge2d[i, 1]**2 *
                                         (x**2 + (y/mge2d[i, 2])**2))
-    if shape == 'prolate':
+    elif shape == 'prolate':
         for i in range(mge2d.shape[0]):
             rst += mge2d[i, 0] * np.exp(-0.5/mge2d[i, 1]**2 *
                                         ((-y)**2 + (x/mge2d[i, 2])**2))
@@ -240,7 +240,7 @@ def _deprojection(mge2d, inc, shape):
         mge3d[:, 0] = dens
         mge3d[:, 1] = mge2d[:, 1]
         mge3d[:, 2] = qintr
-    if shape == 'prolate':
+    elif shape == 'prolate':
         qintr = np.sqrt(1.0/mge2d[:, 2]**2 - np.cos(inc)**2)/np.sin(inc)
         if np.any(qintr > 10):
             raise RuntimeError('q > 10.0 conponents')
@@ -358,7 +358,7 @@ class jam:
         if shape == 'oblate':
             self.xbin_pc = xbin*self.pc
             self.ybin_pc = ybin*self.pc
-        if shape == 'prolate':
+        elif shape == 'prolate':
             self.xbin_pc = ybin*self.pc  # rotate 90 degree if prolate
             self.ybin_pc = -xbin*self.pc
             temn = nx

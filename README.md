@@ -25,15 +25,21 @@ Contents
 Below is a brief description of the contents of the directories in the
 JAM root directory:
 
-setup.py: empty
-
  * `cpyjam`: Contains the model souce codes (cython, to be developed)
 
  * `pyjam`: Contains the model souce codes (python)
-    * axi_rms.py: main JAM modelling routine
-    * cap_quadva.py: integrator
+    * `axi_rms.py`: main JAM modelling routine
+    * `cap_quadva.py`: integrator
 
  * `tests`: Contains the test scripts
-    * oblate_test.py: comparison between the oblate model here and the original version (i.e. from Cappellari)
-    * prolate_test_spherical.py: comparison between oblate and prolate model in spherical case (q=1)
+    * `oblate_test.py`: Comparison between the oblate model here and the original version (i.e. from Cappellari)
+    * `prolate_test_spherical.py`: Comparison between oblate and prolate model in spherical case (q=1)
+    
+ * `utils`: Contains some useful utilities (e.g. mge, dark halo class)
+    * `util_dm.py`: Class for dark matter halos. Including density profile, enclosed mass calculation and MGE
+    approaximation.
+    * `util_mge.py`: Class for MGE density profiles. Including surface birghtness, luminosity density, total
+    luminosity calculation, 2D to 3D deprojection and 2D, 3D enclosed mass calculation.
 
+* `mge1d`: Cython module for 1D mge fitting. See mge1d/install.txt for more information  about how
+installation.
