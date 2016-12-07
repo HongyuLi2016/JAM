@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import numpy as np
 import matplotlib.pyplot as plt
-from contex import pyjam
+from contex import JAM
 from velocity_plot import velocity_plot
 from scipy import stats
 from matplotlib import colors
@@ -56,17 +56,17 @@ def test_jam_axi_rms():
     goodbins = r > 10
     '-----------------------------call JAM model------------------------------'
     # Arbitrarily exclude the center to illustrate how to use goodbins
-    lhy = pyjam.axi_rms.jam(lum_mge, pot_mge, distance, xbin, ybin, mbh=mbh,
-                            rms=rms, goodbins=goodbins, sigmapsf=sigmapsf,
-                            pixsize=pixsize, shape='prolate', nrad=30000,
-                            index=0.5)
+    lhy = JAM.pyjam.axi_rms.jam(lum_mge, pot_mge, distance, xbin, ybin, mbh=mbh,
+                                rms=rms, goodbins=goodbins, sigmapsf=sigmapsf,
+                                pixsize=pixsize, shape='prolate', nrad=30000,
+                                index=0.5)
     tem = lhy.xbin_pc
     lhy.xbin_pc = -lhy.ybin_pc
     lhy.ybin_pc = tem
     rmsModel = lhy.run(inc, beta)
     '-----------------------------plot figures-------------------------------'
     # print rmsModel
-    xbinC, ybinC, rmsModelC, mlC = np.load('Cappellair_spherical.npy')
+    xbinC, ybinC, rmsModelC, mlC = np.load('data/Cappellair_spherical.npy')
     fig = plt.figure()
     vmin, vmax = stats.scoreatpercentile(rmsModelC, [0.5, 99.5])
     norm = colors.Normalize(vmin=(vmin), vmax=(vmax))
@@ -90,6 +90,7 @@ def test_jam_axi_rms():
     ax4.text(0.05, 0.65, 'MC-LHY',
              transform=ax4.transAxes, fontproperties=text_font)
     plt.show()
+
 
 if __name__ == '__main__':
     test_jam_axi_rms()

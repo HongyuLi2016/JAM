@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import numpy as np
 import matplotlib.pyplot as plt
-from contex import pyjam
+from contex import JAM
 from velocity_plot import velocity_plot
 from scipy import stats
 from matplotlib import colors
@@ -55,11 +55,12 @@ def test_jam_axi_rms():
     pixsize = 0.8
     goodbins = r > 10
     '-----------------------------call JAM model------------------------------'
-    lhy = pyjam.axi_rms.jam(lum_mge, pot_mge, distance, xbin, ybin, mbh=mbh,
-                            rms=rms, goodbins=goodbins, sigmapsf=sigmapsf,
-                            pixsize=pixsize, shape='oblate', nrad=30, index=0.5)
+    lhy = JAM.pyjam.axi_rms.jam(lum_mge, pot_mge, distance, xbin, ybin, mbh=mbh,
+                                rms=rms, goodbins=goodbins, sigmapsf=sigmapsf,
+                                pixsize=pixsize, shape='oblate', nrad=30,
+                                index=0.5)
     rmsModel = lhy.run(inc, beta)
-    xbinC, ybinC, rmsModelC, mlC = np.load('Cappellair_oblate.npy')
+    xbinC, ybinC, rmsModelC, mlC = np.load('data/Cappellair_oblate.npy')
     '-----------------------------plot figures-------------------------------'
     fig = plt.figure()
     vmin, vmax = stats.scoreatpercentile(rmsModelC, [0.5, 99.5])

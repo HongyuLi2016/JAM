@@ -38,6 +38,23 @@ def _Hu_inte(u,
     return rst
 
 
+def Re(mge2d, lower=0.5, upper=30.0):
+    '''
+    calculate the effective radius using Cappellari 2013 MNRAS 432,1709
+      Equation (11)
+    '''
+    L = 2*np.pi * mge2d[:, 0] * mge2d[:, 1]**2 * mge2d[:, 2]
+    R = np.logspace(np.log10(lower), np.log10(upper), 5000)
+    enclosedL = R.copy()
+    for i in range(R.size):
+        enclosedL[i] = \
+            np.sum(L * (1-np.exp(-(R[i])**2 / (2.0 * mge2d[:, 1]**2 *
+                                               mge2d[:, 2]))))
+    halfL = np.sum(L) / 2.0
+    ii = np.abs(enclosedL-halfL) == np.min(np.abs(enclosedL-halfL))
+    return np.mean(R[ii])
+
+
 class mge:
     def __init__(self, mge2d, inc, shape='oblate', dist=None):
         '''

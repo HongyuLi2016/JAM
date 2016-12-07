@@ -255,34 +255,32 @@ def _deprojection(mge2d, inc, shape):
 class jam:
     '''
     Main calss for JAM modelling
+    lum, pot: N*3 mge coefficients arrays for tracer density and luminous
+              matter potential (dark matter potential should be provided
+              separately when calling the run method). Usually lum=pot
+              if there is no stellar mass-to-light ratio gradient.
+    distance: distance in Mpc
+    xbin, ybin: coordinates in arcsec at which one wants to compute the
+                model predictions (x must be aligned with the major axis
+                for both oblate and prolate model)
+    mbh: blackhole mass in M_solar
+    rms: observed root-mean-squared velocities
+    erms: error of rms, if None, 5% constant error will be assumed.
+    goodbins: good bins used in calculate chi2, bool array
+    sigmapsf: gaussian psf in arcsec (MaNGA ~ 1.0 - 1.5 )
+    pixsize: IFU fibersize (MaNGA - 2.0 arcsec)
+    step: kernel and psf grid step
+    nrad: number of grid in x axis
+    nang: not used in this version
+    rbh: blackhole mge sigma (do not change this parameter if unnecessary)
+    tensor: moments to be calculated, zz for LOS
+    index: _powspace parameter, see _powspace() function
+    shape: luminous matter shape
     '''
     def __init__(self, lum, pot, distance, xbin, ybin, mbh=None, rms=None,
                  erms=None, goodbins=None, sigmapsf=0.0, pixsize=0.0,
                  step=None, nrad=25, nang=10, rbh=0.01, tensor='zz',
                  index=0.5, shape='oblate', quiet=False, **kwargs):
-        '''
-        lum, pot: N*3 mge coefficients arrays for tracer density and luminous
-                  matter potential (dark matter potential should be provided
-                  separately when calling the run method). Usually lum=pot
-                  if there is no stellar mass-to-light ratio gradient.
-        distance: distance in Mpc
-        xbin, ybin: coordinates in arcsec at which one wants to compute the
-                    model predictions (x must be aligned with the major axis
-                    for both oblate and prolate model)
-        mbh: blackhole mass in M_solar
-        rms: observed root-mean-squared velocities
-        erms: error of rms, if None, 5% constant error will be assumed.
-        goodbins: good bins used in calculate chi2, bool array
-        sigmapsf: gaussian psf in arcsec (MaNGA ~ 1.0 - 1.5 )
-        pixsize: IFU fibersize (MaNGA - 2.0 arcsec)
-        step: kernel and psf grid step
-        nrad: number of grid in x axis
-        nang: not used in this version
-        rbh: blackhole mge sigma (do not change this parameter if unnecessary)
-        tensor: moments to be calculated, zz for LOS
-        index: _powspace parameter, see _powspace() function
-        shape: luminous matter shape
-        '''
         # check invalid numbers in the input arrays
         if check_invalid_values(lum) > 0:
             print lum
