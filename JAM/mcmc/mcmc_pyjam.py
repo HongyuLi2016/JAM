@@ -4,9 +4,10 @@ import emcee
 import JAM.pyjam as pyjam
 import JAM.utils.util_dm as util_dm
 import JAM.utils.util_mge as util_mge
+from JAM.utils.util_rst import estimatePrameters, printParameters
+from JAM.utils.util_rst import printModelInfo
 from astropy.cosmology import Planck13
 from time import time, localtime, strftime
-from scipy.stats import gaussian_kde
 import pickle
 # from emcee.utils import MPIPool
 # import sys
@@ -68,29 +69,6 @@ def flat_initp(keys, nwalkers):
     return p0
 
 
-def estimatePrameters(flatchain, method='median', flatlnprob=None):
-    '''
-    '''
-    if method == 'median':
-        return np.percentile(flatchain, 50, axis=0)
-    elif method == 'mean':
-        return np.mean(flatchain, axis=0)
-    elif method == 'peak':
-        pars = np.zeros(flatchain.shape[1])
-        for i in range(len(pars)):
-            xmin = flatchain[:, i].min()
-            xmax = flatchain[:, i].max()
-            kernel = gaussian_kde(flatchain[:, i])
-            x = np.linspace(xmin, xmax, 300)
-            prob = kernel(x)
-            pars[i] = np.mean(x[prob == prob.max()])
-        return pars
-    elif method == 'max':
-        return np.mean(flatchain[flatlnprob == flatlnprob.max(), :], axis=0)
-    else:
-        raise ValueError('Do not support {} method'.format(method))
-
-
 def analyzeRst(sampler, nburnin=0):
     '''
     analyze the mcmc and generage resutls
@@ -104,7 +82,7 @@ def analyzeRst(sampler, nburnin=0):
     print 'Mean autocorrelation time: {:.1f}'.format(np.mean(rst['acor']))
     rst['acceptance_fraction'] = sampler.acceptance_fraction
     rst['goodchains'] = ((rst['acceptance_fraction'] > 0.15) *
-                         (rst['acceptance_fraction'] < 0.6))
+                         (rst['acceptance_fraction'] < 0.75))
     print ('Mean accept fraction: {:.3f}'
            .format(np.mean(rst['acceptance_fraction'])))
     if rst['goodchains'].sum() / float(model['nwalkers']) < 0.6:
@@ -113,8 +91,8 @@ def analyzeRst(sampler, nburnin=0):
     else:
         goodchains = rst['goodchains']
     flatchain = \
-        rst['chain'][goodchains, nburnin, :].reshape((-1, model['ndim']))
-    flatlnprob = rst['lnprobability'][goodchains, nburnin].reshape(-1)
+        rst['chain'][goodchains, nburnin:, :].reshape((-1, model['ndim']))
+    flatlnprob = rst['lnprobability'][goodchains, nburnin:].reshape(-1)
     medianPars = estimatePrameters(flatchain, flatlnprob=flatlnprob)
     meanPars = estimatePrameters(flatchain, flatlnprob=flatlnprob,
                                  method='mean')
@@ -141,45 +119,8 @@ def dump():
         pickle.dump(model, f)
 
 
-def load():
-    pass
-
-
 def printBoundaryPrior(model):
     pass
-
-
-def printParameters(names, values):
-    temp = ['{}: {:.2f}  '.format(names[i], values[i])
-            for i in range(len(names))]
-    print ''.join(temp)
-
-
-def printModelInfo(model):
-    print '--------------------------------------------------'
-    print 'Model Info'
-    print 'pyJAM model run at {}'.format(model['date'])
-    print 'Galaxy name: {}'.format(model.get('name', 'LHY'))
-    print 'Number of tracer MGEs: {}'.format(model['lum2d'].shape[0])
-    print ('Number of luminous potential MGEs: {}'
-           .format(model['pot2d'].shape[0]))
-    print ('Number of good observational bins: {}/{}'
-           .format(model['goodbins'].sum(), len(model['goodbins'])))
-    print 'Effective radius: {:.2f} arcsec'.format(model['Re_arcsec'])
-    print 'errScale {:.2f}'.format(model['errScale'])
-    print 'Model shape: {}'.format(model['shape'])
-    print 'Sigmapsf: {:.2f}  Pixelsize: {:.2f}'.format(model['sigmapsf'],
-                                                       model['pixsize'])
-    print 'Burning steps: {}'.format(model['burnin'])
-    print 'Clip:  {}'.format(model['clip'])
-    if model['clip'] in ['sigma']:
-        print 'Clip steps: {}'.format(model['clipStep'])
-        if model['clip'] == 'sigma':
-            print 'Sigma for sigmaclip: {:.2f}'.format(model['clipSigma'])
-    print 'nwalkers: {}'.format(model['nwalkers'])
-    print 'Run steps: {}'.format(model['runStep'])
-    print 'Initial positons of mcmc chains: {}'.format(model['p0'])
-    print '--------------------------------------------------'
 
 
 def _sigmaClip(sampler, pos):
@@ -320,6 +261,9 @@ class mcmc:
       runStep: Number of steps for the final run, integer. Default: 1000 steps
       nwalkers: Number of walkers in mcmc, integer. Default: 30
       p0: inital position distribution of the mcmc chains. String, flat or fit
+    4. Output arguments
+      outfolder: output folder path. Default: '.'
+      fname: output filename. Default: 'dump.dat'
     '''
     def __init__(self, galaxy):
         '''
@@ -481,6 +425,7 @@ class mcmc:
         printModelInfo(model)
         printBoundaryPrior(model)
         model['lnprob'] = lnprob_massFollowLight
+        model['type'] = 'massFollowLight'
         model['ndim'] = 3
         model['JAMpars'] = ['cosinc', 'beta', 'ml']
         nwalkers = model['nwalkers']

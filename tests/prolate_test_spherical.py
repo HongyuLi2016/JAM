@@ -2,7 +2,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from contex import JAM
-from velocity_plot import velocity_plot
+from JAM.utils.velocity_plot import velocity_plot
 from scipy import stats
 from matplotlib import colors
 import matplotlib
