@@ -52,7 +52,7 @@ Below is a brief description of the contents of the directories in the
 Some other packages and test scripts
 * `mge1d`: Cython module for 1D mge fitting. See mge1d/install.txt for more information  about installation.
 
- * `tests`: Contains the test scripts
+* `tests`: Contains the test scripts
     * `oblate_test.py`: Comparison between the oblate model here and the original version (i.e. from Cappellari)
     * `prolate_test_spherical.py`: Comparison between oblate and prolate model in spherical case (q=1)
     * `mcmc_example_massFollowLight.py`: Fit a mass-follow-light JAM model to mock data with emcee.
