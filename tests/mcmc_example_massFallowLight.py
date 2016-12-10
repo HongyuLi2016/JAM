@@ -11,7 +11,8 @@ def test_emcee():
     galaxy = {'lum2d': mge2d, 'distance': dist, 'xbin': xbin, 'ybin': ybin,
               'rms': rms, 'errRms': erms, 'runStep': 3000, 'burnin': 500,
               'clipStep': 1000, 'shape': 'oblate', 'threads': 8,
-              'clip': 'noclip', 'outfolder': 'data', 'fname': 'mock_test.dat'}
+              'clip': 'noclip', 'outfolder': 'data',
+              'fname': 'mock_massFollowLight_out.dat'}
 
     lhy = JAM.mcmc.mcmc_pyjam.mcmc(galaxy)
     # use set_config method to change model configurations

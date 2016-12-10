@@ -22,7 +22,7 @@ def _inte_3dencloseM(r, u,
     rst = 0.0
     for i in range(len(twoSigma2)):
         rst += dens[i] * np.exp(- r*r / twoSigma2[i] *
-                                (u*u + (1 - u*u) / q2[i])) * r*r
+                                ((1 - u*u) + u*u / q2[i])) * r*r
     return FOUR_PI * rst
 
 
@@ -55,11 +55,40 @@ def Re(mge2d, lower=0.5, upper=30.0):
     return np.mean(R[ii])
 
 
+def projection(mge3d, inc, shape='oblate'):
+    '''
+    Convert 3d mges to 2d mges
+    inc in radians
+    '''
+    dens = mge3d[:, 0]
+    sigma3d = mge3d[:, 1]
+    qint = mge3d[:, 2]
+    mge2d = mge3d.copy()
+    if shape == 'oblate':
+        qobs = np.sqrt(qint**2 * np.sin(inc)**2 + np.cos(inc)**2)
+        surf = dens * qint / qobs * (SQRT_TOW_PI * sigma3d)
+        mge2d[:, 0] = surf
+        mge2d[:, 2] = qobs
+    elif shape == 'prolate':
+        qobs = np.sqrt(1.0/(qint**2 * np.sin(inc)**2 + np.cos(inc)**2))
+        sigma2d = sigma3d/qobs
+        surf = (SQRT_TOW_PI * sigma2d * qobs**2 * qint) * dens
+        mge2d[:, 0] = surf
+        mge2d[:, 1] = sigma2d
+        mge2d[:, 2] = qobs
+    else:
+        raise ValueError('shape {} not supported'.format(shape))
+    return mge2d
+
+
 class mge:
+    '''
+    The default units are [L_solar/pc^2]  [pc]  [none]
+    inc in radians
+    All the length unit is pc, 2d density is in [L_solar/pc^2],
+      3d density is in [L_solar/pc^3]
+    '''
     def __init__(self, mge2d, inc, shape='oblate', dist=None):
-        '''
-        The default units are [L_solar/pc^2]  [pc]  [none]
-        '''
         if dist is not None:
             pc = dist * np.pi / 0.648
             mge2d[:, 1] *= pc
@@ -116,6 +145,18 @@ class mge:
                                         (R**2 + (z/mge3d[i, 2])**2))
         return rst
 
+    def meanDensity(self, r):
+        '''
+        Return the mean density at give spherical radius r
+        r in pc, density in L_solar/pc^3
+        '''
+        cosTheta = np.linspace(0.0, 1.0, 500)
+        sinTheta = np.sqrt(1 - cosTheta**2)
+        R = r * sinTheta
+        z = r * cosTheta
+        density = self.luminosityDensity(R, z)
+        return np.average(density)
+
     def surfaceBrightness(self, x, y):
         '''
         Return the surface brightness at coordinate x, y (in L_solar/pc^2)
@@ -128,6 +169,7 @@ class mge:
                 rst += self.mge2d[i, 0] * np.exp(-0.5/self.mge2d[i, 1]**2 *
                                                  (y**2+(x/self.mge2d[i, 2])**2))
         elif self.shape == 'oblate':
+            for i in range(self.ngauss):
                 rst += self.mge2d[i, 0] * np.exp(-0.5/self.mge2d[i, 1]**2 *
                                                  (x**2+(y/self.mge2d[i, 2])**2))
         return rst
@@ -135,9 +177,8 @@ class mge:
     def enclosed3Dluminosity(self, r):
         '''
         Return the 3D enclosed luminosity within a sphere r (in L_solar)
-        input r should be in Kpc
+        input r should be in pc
         '''
-        r *= 1e3
         mge3d = self.deprojection()
         dens = mge3d[:, 0]
         twoSigma2 = 2.0 * mge3d[:, 1]**2
@@ -150,9 +191,8 @@ class mge:
         '''
         Return the 2D enclosed luminosity within a circular aperture R
           (in L_solar)
-        input R should be in Kpc
+        input R should be in pc
         '''
-        R *= 1e3  # convert kpc to pc
         surf = self.mge2d[:, 0]
         twoSigma2 = 2.0 * self.mge2d[:, 1]**2
         q2 = self.mge2d[:, 2]**2
@@ -162,7 +202,7 @@ class mge:
 
     def Phi(self, R, z):
         '''
-        Return the gravitational potential at R, z
+        Return the gravitational potential at R, z (R, z in pc)
         '''
         G = 0.00430237
         mge3d = self.deprojection()
@@ -175,9 +215,8 @@ class mge:
     def Vc(self, R, ml=1.0):
         '''
         Return the rotational velocity at R on the equatorial plane (in km/s)
-        R in kpc
+        R in pc
         ml mass-to-light ratio of these Gaussians
         '''
-        R *= 1e3
         Force = derivative(self.Phi, R, args=([0]))
         return np.sqrt(ml*Force*R)

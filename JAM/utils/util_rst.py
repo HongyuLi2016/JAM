@@ -8,48 +8,15 @@ import util_dm
 import corner_plot
 from cap_symmetrize_velfield import symmetrize_velfield
 from velocity_plot import velocity_plot
+from vprofile import vprofile
+import matplotlib.pyplot as plt
 from matplotlib import tri, colors
 from matplotlib.patches import Circle
-import matplotlib.font_manager
-ticks_font =\
-    matplotlib.font_manager.FontProperties(family='times new roman',
-                                           style='normal', size=10,
-                                           weight='bold', stretch='normal')
-text_font =\
-    matplotlib.font_manager.FontProperties(family='times new roman',
-                                           style='normal', size=15,
-                                           weight='bold', stretch='normal')
-ticks_font1 =\
-    matplotlib.font_manager.FontProperties(family='times new roman',
-                                           style='normal', size=8,
-                                           weight='bold', stretch='normal')
-label_font =\
-    matplotlib.font_manager.FontProperties(family='times new roman',
-                                           style='normal', size=15,
-                                           weight='bold', stretch='normal')
-
-
-def set_labels(ax, rotate=False, font=ticks_font):
-    for l in ax.get_xticklabels():
-        if rotate:
-            l.set_rotation(60)
-        l.set_fontproperties(font)
-    for l in ax.get_yticklabels():
-        # if rotate:
-        #    l.set_rotation(0)
-        l.set_fontproperties(font)
-
-
-def set_lim(ax):
-    xlim = ax.get_xlim()
-    ylim = ax.get_ylim()
-    ax.set_aspect(1, anchor='C')
-    if xlim[1]-xlim[0] > ylim[1]-ylim[0]:
-        ax.set_xlim(xlim[::-1])
-        ax.set_ylim(xlim)
-    else:
-        ax.set_xlim(ylim[::-1])
-        ax.set_ylim(ylim)
+import util_fig
+ticks_font = util_fig.ticks_font
+text_font = util_fig.text_font
+ticks_font1 = util_fig.ticks_font1
+label_font = util_fig.label_font
 
 
 def printParameters(names, values):
@@ -86,6 +53,18 @@ def printModelInfo(model):
     print '--------------------------------------------------'
 
 
+def printBoundaryPrior(model):
+    JAMpars = model.get('JAMpars', ['cosinc', 'beta', 'logrho_s', 'rs',
+                                    'gamma', 'ml'])
+    prior = model['prior']
+    boundary = model['boundary']
+    for name in JAMpars:
+        print ('{:10s} - prior: {:8.3f} {:10.3e}'
+               '    - boundary: [{:8.3f}, {:8.3f}]'
+               .format(name, prior[name][0], prior[name][1],
+                       boundary[name][0], boundary[name][1]))
+
+
 def load(name, path='.'):
     with open('{}/{}'.format(path, name), 'rb') as f:
         data = pickle.load(f)
@@ -118,19 +97,22 @@ def estimatePrameters(flatchain, method='median', flatlnprob=None):
 class modelRst:
     def __init__(self, name, path='.', burnin=0, best='median'):
         self.data = load(name, path=path)
+        # load model data into class
         self.ndim = self.data['ndim']
         self.nwalkers = self.data['nwalkers']
         self.chain = self.data['rst']['chain']
         self.goodchains = self.data['rst']['goodchains']
+        # check good chain fraction
         if self.goodchains.sum()/float(self.nwalkers) < 0.6:
             self.goodchains = np.ones_like(self.goodchains, dtype=bool)
             print 'Warning - goodchain fraction less than 0.6'
-            print 'Acceptace fraction:'
+            print 'Acceptance fraction:'
             print self.data['rst']['acceptance_fraction']
         self.lnprob = self.data['rst']['lnprobability']
         self.flatchain = self.chain[self.goodchains,
                                     burnin:, :].reshape(-1, self.ndim)
         self.flatlnprob = self.lnprob[self.goodchains, burnin:].reshape(-1)
+        # estimate the beset model parameters
         self.medianPars = estimatePrameters(self.flatchain,
                                             flatlnprob=self.flatlnprob)
         self.meanPars = estimatePrameters(self.flatchain,
@@ -142,11 +124,26 @@ class modelRst:
         self.maxPars = estimatePrameters(self.flatchain,
                                          flatlnprob=self.flatlnprob,
                                          method='max')
+        # choose the best parameter type
         switch = {'median': self.medianPars, 'mean': self.meanPars,
                   'peak': self.peakPars, 'max': self.maxPars}
         bestPars = switch[best]
+        self.bestPars = {}
+        for i, key in enumerate(self.data['JAMpars']):
+            self.bestPars[key] = bestPars[i]
+        # model inclination
+        cosinc = self.bestPars.get('cosinc', np.pi/2.0)
+        self.inc = np.arccos(cosinc)
+        if 'ml' not in self.bestPars.keys():
+            print ('Waring - do not find ml parameter, set to 1.0')
+
+        self.ml = self.bestPars.get('ml', 1.0)
+        # load observational data
+        self.dist = self.data['distance']
+        self.pc = self.dist * np.pi / 0.648
         self.lum2d = self.data['lum2d']
         self.pot2d = self.data['pot2d']
+
         self.xbin = self.data['xbin']
         self.ybin = self.data['ybin']
         self.rms = self.data['rms'].clip(0.0, 330.0)
@@ -157,25 +154,66 @@ class modelRst:
                                 self.ybin[self.goodbins],
                                 self.rms[self.goodbins])
 
-        JAMmodel = self.data['JAM']
+        # run a JAM model with the choosen best model parameters
+        JAMmodel = self.data['JAM']  # restore JAM model
+        self.shape = self.data['shape']
+        # create stellar mass mge objected (used in mass profile)
+        self.LmMge = util_mge.mge(self.pot2d, inc=self.inc, shape=self.shape,
+                                  dist=self.dist)
+        # set black hole mge object
+        bh3dmge = JAMmodel.mge_bh
+        if bh3dmge is None:
+            self.BhMge = None
+        else:
+            bh2dmge = util_mge.projection(bh3dmge, inc=self.inc)
+            self.BhMge = util_mge.mge(bh2dmge, inc=self.inc)
 
         if self.data['type'] == 'massFollowLight':
-            inc = np.arccos(bestPars[0])
-            beta = np.zeros(self.lum2d.shape[0]) + bestPars[1]
+            inc = self.inc
+            Beta = np.zeros(self.lum2d.shape[0]) + bestPars[1]
             ml = bestPars[2]
-            self.rmsModel = JAMmodel.run(inc, beta, ml=ml)
+            self.rmsModel = JAMmodel.run(inc, Beta, ml=ml)
             self.flux = JAMmodel.flux
             self.labels = [r'$\mathbf{cosi}$', r'$\mathbf{\beta}$',
                            r'$\mathbf{M/L}$']
+            self.DmMge = None  # no dark halo
+        elif self.data['type'] == 'spherical_gNFW':
+            inc = self.inc
+            Beta = np.zeros(self.lum2d.shape[0]) + bestPars[1]
+            ml = bestPars[2]
+            logrho_s = bestPars[3]
+            rs = bestPars[4]
+            gamma = bestPars[5]
+            dh = util_dm.gnfw1d(10**logrho_s, rs, gamma)
+            dh_mge3d = dh.mge3d()
+            self.rmsModel = JAMmodel.run(inc, Beta, ml=ml, mge_dh=dh_mge3d)
+            self.flux = JAMmodel.flux
+            self.labels = [r'$\mathbf{cosi}$', r'$\mathbf{\beta}$',
+                           r'$\mathbf{M^*/L}$', r'$\mathbf{log\ \rho_s}$',
+                           r'$\mathbf{r_s}$', r'$\mathbf{\gamma}$']
+            # create dark halo mass mge object
+            self.DmMge = util_mge.mge(dh.mge2d(), inc=self.inc)
+        else:
+            raise ValueError('model type {} not supported')
 
     def printInfo(self):
         printModelInfo(self.data)
 
-    def enclosed2DMass(self):
-        pass
+    def printPrior(self):
+        printBoundaryPrior(self.data)
 
-    def enclosed3DMass(self):
-        pass
+    def meanDisp(self, R):
+        '''
+        Calcualte the surface brightness weighted mean velocity dispersion
+          within R [arcsec]
+        '''
+        mge = util_mge.mge(self.lum2d, inc=self.inc, shape=self.shape,
+                           dist=self.dist)
+        surf = mge.surfaceBrightness(self.xbin*self.pc, self.ybin*self.pc)
+        r = np.sqrt(self.xbin**2 + self.ybin**2)
+        i_in = r < R
+        sigma_R = np.average(self.rms[i_in], weights=surf[i_in])
+        return sigma_R
 
     def cornerPlot(self, figname='mcmc.png', outpath='.',
                    clevel=[0.683, 0.95, 0.997], truths='max', true=None,
@@ -197,7 +235,7 @@ class modelRst:
             axes0b = fig.add_axes([xpos, ypos+size, size, size])
             axes0b.set_yticklabels([])
             axes0b.set_xticklabels([])
-            set_labels(axes0a)
+            util_fig.set_labels(axes0a)
             if residual:
                 axes0c = fig.add_axes([xpos-size*1.3, ypos+size, size, size])
                 axes0c.set_yticklabels([])
@@ -245,5 +283,21 @@ class modelRst:
             raise ValueError('vmap {} not supported'.format(vmap))
         fig.savefig('{}/{}'.format(outpath, figname), dpi=300)
 
-    def profiles(self):
-        pass
+    def plotChain(self, figname='chain.png', outpath='.', **kwargs):
+        figsize = (8.0, self.ndim*2.0)
+        fig, axes = plt.subplots(self.ndim, 1, sharex=True, figsize=figsize)
+        for i in range(self.ndim):
+            axes[i].plot(self.chain[:, :, i].T, color='k', alpha=0.2)
+            axes[i].set_ylabel(self.labels[i])
+        axes[-1].set_xlabel('nstep')
+        fig.savefig('{}/{}'.format(outpath, figname), dpi=200)
+
+    def plotVrms(self, figname='rmsProfile.png', outpath='.', width=1.0,
+                 **kwargs):
+        fig, ax = plt.subplots(1, 2, figsize=(6, 3))
+        vprofile(self.xbin, self.ybin, self.rms, vModel=self.rmsModel,
+                 ax=ax[0], width=width)
+        vprofile(self.xbin, self.ybin, self.rms, vModel=self.rmsModel,
+                 ax=ax[1], angle=90.0, width=width, ylabel=None)
+        plt.tight_layout()
+        fig.savefig('{}/{}'.format(outpath, figname), dpi=300)

@@ -5,7 +5,7 @@ import JAM.pyjam as pyjam
 import JAM.utils.util_dm as util_dm
 import JAM.utils.util_mge as util_mge
 from JAM.utils.util_rst import estimatePrameters, printParameters
-from JAM.utils.util_rst import printModelInfo
+from JAM.utils.util_rst import printModelInfo, printBoundaryPrior
 from astropy.cosmology import Planck13
 from time import time, localtime, strftime
 import pickle
@@ -119,10 +119,6 @@ def dump():
         pickle.dump(model, f)
 
 
-def printBoundaryPrior(model):
-    pass
-
-
 def _sigmaClip(sampler, pos):
     maxN = model['clipMaxN']
     lnprob = model['lnprob']
@@ -204,6 +200,33 @@ def lnprob_massFollowLight(pars, returnRms=False, returnChi2=False):
     Beta = np.zeros(model['lum2d'].shape[0]) + beta
     mflJAM = model['JAM']
     rmsModel = mflJAM.run(inc, Beta, ml=ml)
+    if returnRms:
+        return rmsModel
+    chi2 = (((rmsModel[model['goodbins']] - model['rms'][model['goodbins']]) /
+             model['errRms'][model['goodbins']])**2).sum()
+    if returnChi2:
+        return chi2
+    if np.isnan(chi2):
+        print ('Warning - JAM return nan value, beta={:.2f} may not'
+               ' be correct'.format(beta))
+        return -np.inf
+    return -0.5*chi2 + lnpriorValue
+
+
+def lnprob_spherical_gNFW(pars, returnRms=False, returnChi2=False):
+    cosinc, beta, ml, logrho_s, rs, gamma = pars
+    # print pars
+    parsDic = {'cosinc': cosinc, 'beta': beta, 'ml': ml,
+               'logrho_s': logrho_s, 'rs': rs, 'gamma': gamma}
+    if np.isinf(check_boundary(parsDic)):
+        return -np.inf
+    lnpriorValue = lnprior(parsDic)
+    inc = np.arccos(cosinc)
+    Beta = np.zeros(model['lum2d'].shape[0]) + beta
+    sgnfJAM = model['JAM']
+    dh = util_dm.gnfw1d(10**logrho_s, rs, gamma)
+    dh_mge3d = dh.mge3d()
+    rmsModel = sgnfJAM.run(inc, Beta, ml=ml, mge_dh=dh_mge3d)
     if returnRms:
         return rmsModel
     chi2 = (((rmsModel[model['goodbins']] - model['rms'][model['goodbins']]) /
@@ -422,12 +445,12 @@ class mcmc:
     def massFollowLight(self):
         print '--------------------------------------------------'
         print 'Mass follow light model'
-        printModelInfo(model)
-        printBoundaryPrior(model)
         model['lnprob'] = lnprob_massFollowLight
         model['type'] = 'massFollowLight'
         model['ndim'] = 3
         model['JAMpars'] = ['cosinc', 'beta', 'ml']
+        printModelInfo(model)
+        printBoundaryPrior(model)
         nwalkers = model['nwalkers']
         threads = model['threads']
         ndim = model['ndim']
@@ -459,4 +482,35 @@ class mcmc:
         dump()
 
     def spherical_gNFW(self):
-        pass
+        print '--------------------------------------------------'
+        print 'spherical gNFW model'
+        model['lnprob'] = lnprob_spherical_gNFW
+        model['type'] = 'spherical_gNFW'
+        model['ndim'] = 6
+        model['JAMpars'] = ['cosinc', 'beta', 'ml', 'logrho_s', 'rs', 'gamma']
+        printModelInfo(model)
+        printBoundaryPrior(model)
+        nwalkers = model['nwalkers']
+        threads = model['threads']
+        ndim = model['ndim']
+        JAMpars = model['JAMpars']
+        if model['p0'] == 'flat':
+            p0 = flat_initp(JAMpars, nwalkers)
+        elif model['p0'] == 'fit':
+            print ('Calculate maximum lnprob positon from optimisiztion - not'
+                   'implemented yet')
+            exit(0)
+        else:
+            raise ValueError('p0 must be flat or fit, {} is '
+                             'not supported'.format(model['p0']))
+        initSampler = \
+            emcee.EnsembleSampler(nwalkers, ndim, lnprob_spherical_gNFW,
+                                  threads=threads)
+        sampler = _runEmcee(initSampler, p0)
+        # pool.close()
+        print '--------------------------------------------------'
+        print ('Finish! Total elapsed time: {:.2f}s'
+               .format(time()-self.startTime))
+        rst = analyzeRst(sampler)
+        model['rst'] = rst
+        dump()

@@ -52,6 +52,11 @@ ticks_font1 =\
                                     style='normal', size='x-small',
                                     weight='bold', stretch='normal')
 
+label_font =\
+    mpl.font_manager.FontProperties(family='times new roman',
+                                    style='normal', size='large',
+                                    weight='bold', stretch='normal')
+
 
 def set_labels(ax, x=True, y=True, xrotate=False,
                yrotate=False, font=ticks_font):
