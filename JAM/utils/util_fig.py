@@ -1,6 +1,8 @@
 import matplotlib as mpl
 from matplotlib import colors, colorbar
 import matplotlib.pyplot as plt
+import os
+JAMPATH = os.environ.get('JAMPATH')
 # from matplotlib.ticker import MaxNLocator
 _cdict = {'red': ((0.000,   0.01,   0.01),
                   (0.170,   0.0,    0.0),
@@ -40,22 +42,20 @@ _cdict = {'red': ((0.000,   0.01,   0.01),
 sauron = colors.LinearSegmentedColormap('sauron', _cdict)
 
 ticks_font =\
-    mpl.font_manager.FontProperties(family='times new roman',
-                                    style='normal', size='small',
-                                    weight='bold', stretch='normal')
+    mpl.font_manager.FontProperties(fname='{}/utils/TimesNewRomanBold.ttf'
+                                    .format(JAMPATH), size='small')
+
 text_font =\
-    mpl.font_manager.FontProperties(family='times new roman',
-                                    style='normal', size='large',
-                                    weight='bold', stretch='normal')
+    mpl.font_manager.FontProperties(fname='{}/utils/TimesNewRomanBold.ttf'
+                                    .format(JAMPATH), size='large')
+
 ticks_font1 =\
-    mpl.font_manager.FontProperties(family='times new roman',
-                                    style='normal', size='x-small',
-                                    weight='bold', stretch='normal')
+    mpl.font_manager.FontProperties(fname='{}/utils/TimesNewRomanBold.ttf'
+                                    .format(JAMPATH), size='x-small')
 
 label_font =\
-    mpl.font_manager.FontProperties(family='times new roman',
-                                    style='normal', size='large',
-                                    weight='bold', stretch='normal')
+    mpl.font_manager.FontProperties(fname='{}/utils/TimesNewRomanBold.ttf'
+                                    .format(JAMPATH), size='large')
 
 
 def set_labels(ax, x=True, y=True, xrotate=False,
