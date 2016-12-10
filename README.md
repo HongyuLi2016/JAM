@@ -20,6 +20,17 @@ cd /path/to/desired/location/
 git clone https://github.com/HongyuLi2016/JAM
 ```
 
+Be careful, before use the plot routines in JAM/utils folder, please set the JAMPATH enviroment variable.
+This ensure JAM could find the fond path correctly.
+
+The enviroment variable can be set by add the following comment into ~/.bashrc or ~/.bash_profile
+```
+export JAMPATH=YourInstallPath
+```
+YourInstallPath is the path where you put the JAM package (i.e. you can find pyjam, cpyjam, utils etc.).
+
+
+
 Contents
 --------
 Below is a brief description of the contents of the directories in the
