@@ -422,10 +422,12 @@ class jam:
         ml: stellar mass-to-light ratio. self.pot will be scaled by this factor,
             but mge_dh and black halo mge will not be scaled!
         '''
-
+        # scale the stellar potential by ml
+        pot_pc = self.pot_pc.copy()
+        pot_pc[:, 0] *= ml
         # deprojection
         self.lum3d_pc = _deprojection(self.lum_pc, inc, self.shape)
-        self.pot3d_pc = _deprojection(self.pot_pc, inc, self.shape)
+        self.pot3d_pc = _deprojection(pot_pc, inc, self.shape)
 
         if self.mge_bh is not None:
             self.pot3d_pc = np.append(self.mge_bh, self.pot3d_pc, axis=0)
@@ -437,7 +439,7 @@ class jam:
             surf = _mge_surf(self.lum_pc, self.xbin_pc,
                              self.ybin_pc, shape=self.shape)
             self.flux = surf
-            self.rmsModel = np.sqrt(wvrms2/surf*ml)
+            self.rmsModel = np.sqrt(wvrms2/surf)
             if self.tensor in ('xy', 'xz'):
                 self.rmsModel *= np.sign(self.xbin_pc*self.ybin_pc)
             return self.rmsModel
@@ -448,8 +450,8 @@ class jam:
                              self.yGrid, shape=self.shape)
             if not self.psfConvolution:
                 # interpolate to the input xbin, ybin
-                tem = np.sqrt((wvrms2/surf*ml).reshape(len(self.ygrid),
-                                                       len(self.xgrid)))
+                tem = np.sqrt((wvrms2/surf).reshape(len(self.ygrid),
+                                                    len(self.xgrid)))
                 self.rmsModel =\
                     bilinear_interpolate(self.xgridIndex, self.ygridIndex, tem,
                                          self.xbin_pcIndex, self.ybin_pcIndex)
@@ -470,7 +472,7 @@ class jam:
                                                    mode='same')
                 surfCar_psf = signal.fftconvolve(surfCar, self.kernel,
                                                  mode='same')
-                tem = np.sqrt(wvrms2Car_psf/surfCar_psf*ml)
+                tem = np.sqrt(wvrms2Car_psf/surfCar_psf)
                 self.rmsModel =\
                     bilinear_interpolate(self.xcar, self.ycar, tem,
                                          self.xbin_pc, self.ybin_pc)

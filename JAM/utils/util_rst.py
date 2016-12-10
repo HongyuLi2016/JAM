@@ -94,7 +94,7 @@ def estimatePrameters(flatchain, method='median', flatlnprob=None):
         raise ValueError('Do not support {} method'.format(method))
 
 
-class modelRst:
+class modelRst(object):
     def __init__(self, name, path='.', burnin=0, best='median'):
         self.data = load(name, path=path)
         # load model data into class
