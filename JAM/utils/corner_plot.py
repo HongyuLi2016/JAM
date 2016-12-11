@@ -2,60 +2,18 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib import colors
 from matplotlib.ticker import MaxNLocator
-import matplotlib
 from matplotlib import rc
+import util_fig
 rc('mathtext', fontset='stix')
-ticks_font =\
-    matplotlib.font_manager.FontProperties(family='times new roman',
-                                           size=16, weight='heavy',
-                                           stretch='normal')
-label_font =\
-    matplotlib.font_manager.FontProperties(family='times new roman',
-                                           size=16, weight='heavy',
-                                           stretch='normal')
-text_font =\
-    matplotlib.font_manager.FontProperties(family='times new roman',
-                                           size=20, weight='bold',
-                                           stretch='normal')
-__all__ = ["corner", "hist2d"]
-_cdict = {'red': ((0.000,   0.01,   0.01),
-                  (0.170,   0.0,    0.0),
-                  (0.336,   0.4,    0.4),
-                  (0.414,   0.5,    0.5),
-                  (0.463,   0.3,    0.3),
-                  (0.502,   0.0,    0.0),
-                  (0.541,   0.7,    0.7),
-                  (0.590,   1.0,    1.0),
-                  (0.668,   1.0,    1.0),
-                  (0.834,   1.0,    1.0),
-                  (1.000,   0.9,    0.9)),
-          'green': ((0.000,   0.01,   0.01),
-                    (0.170,   0.0,    0.0),
-                    (0.336,   0.85,   0.85),
-                    (0.414,   1.0,    1.0),
-                    (0.463,   1.0,    1.0),
-                    (0.502,   0.9,    0.9),
-                    (0.541,   1.0,    1.0),
-                    (0.590,   1.0,    1.0),
-                    (0.668,   0.85,   0.85),
-                    (0.834,   0.0,    0.0),
-                    (1.000,   0.9,    0.9)),
-          'blue': ((0.000,   0.01,   0.01),
-                   (0.170,   1.0,    1.0),
-                   (0.336,   1.0,    1.0),
-                   (0.414,   1.0,    1.0),
-                   (0.463,   0.7,    0.7),
-                   (0.502,   0.0,    0.0),
-                   (0.541,   0.0,    0.0),
-                   (0.590,   0.0,    0.0),
-                   (0.668,   0.0,    0.0),
-                   (0.834,   0.0,    0.0),
-                   (1.000,   0.9,    0.9))
-          }
-
-sauron = colors.LinearSegmentedColormap('sauron', _cdict)
+sauron = util_fig.sauron
+ticks_font = util_fig.ticks_font
+text_font = util_fig.text_font
+ticks_font1 = util_fig.ticks_font1
+label_font = util_fig.label_font
+ticks_font.set_size(16)
+label_font.set_size(18)
+text_font.set_size(20)
 
 
 def quantile(x, q, weights=None):

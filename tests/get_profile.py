@@ -17,7 +17,7 @@ def main():
     profileStellar = np.zeros_like(r)
     for i in range(len(r)):
         profileStellar[i] = (3.8 * mgeStellar.meanDensity(r[i]*1e3)) * 1e9
-    logrho_s = 5.8
+    logrho_s = 5.8 + np.log10(3.8)
     rs = 40.0
     gamma = -1.2
     dh = util_dm.gnfw1d(10**logrho_s, rs, gamma)
