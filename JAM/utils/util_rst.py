@@ -298,6 +298,7 @@ class modelRst(object):
         vprofile(self.xbin, self.ybin, self.rms, vModel=self.rmsModel,
                  ax=ax[0], width=width)
         vprofile(self.xbin, self.ybin, self.rms, vModel=self.rmsModel,
-                 ax=ax[1], angle=90.0, width=width, ylabel=None)
+                 ax=ax[1], angle=90.0, width=width, ylabel=None,
+                 xlabel='y arcsec')
         plt.tight_layout()
         fig.savefig('{}/{}'.format(outpath, figname), dpi=300)

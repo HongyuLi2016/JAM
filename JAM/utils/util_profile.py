@@ -10,6 +10,9 @@ ticks_font = util_fig.ticks_font
 text_font = util_fig.text_font
 ticks_font1 = util_fig.ticks_font1
 label_font = util_fig.label_font
+ticks_font.set_size(11)
+text_font.set_size(14)
+label_font.set_size(14)
 
 
 def _extractProfile(mge, r):
