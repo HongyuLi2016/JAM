@@ -369,13 +369,6 @@ class mcmc:
         model['threads'] = galaxy.get('threads', 1)
         model['outfolder'] = galaxy.get('outfolder', './')
         model['fname'] = galaxy.get('fname', 'dump.dat')
-        # initialize the JAM class and pass to the global parameter
-        model['JAM'] = \
-            pyjam.axi_rms.jam(model['lum2d'], model['pot2d'], model['distance'],
-                              model['xbin'], model['ybin'], mbh=model['bh'],
-                              quiet=True, sigmapsf=model['sigmapsf'],
-                              pixsize=model['pixsize'], nrad=model['nrad'],
-                              shape=model['shape'])
         # self.model[''] = self.
         # set cosinc and beta priors to aviod JAM crashing
         if self.shape == 'oblate':
@@ -449,6 +442,13 @@ class mcmc:
         model['type'] = 'massFollowLight'
         model['ndim'] = 3
         model['JAMpars'] = ['cosinc', 'beta', 'ml']
+        # initialize the JAM class and pass to the global parameter
+        model['JAM'] = \
+            pyjam.axi_rms.jam(model['lum2d'], model['pot2d'], model['distance'],
+                              model['xbin'], model['ybin'], mbh=model['bh'],
+                              quiet=True, sigmapsf=model['sigmapsf'],
+                              pixsize=model['pixsize'], nrad=model['nrad'],
+                              shape=model['shape'])
         printModelInfo(model)
         printBoundaryPrior(model)
         nwalkers = model['nwalkers']
@@ -488,6 +488,14 @@ class mcmc:
         model['type'] = 'spherical_gNFW'
         model['ndim'] = 6
         model['JAMpars'] = ['cosinc', 'beta', 'ml', 'logrho_s', 'rs', 'gamma']
+        # initialize the JAM class and pass to the global parameter
+        model['JAM'] = \
+            pyjam.axi_rms.jam(model['lum2d'], model['pot2d'], model['distance'],
+                              model['xbin'], model['ybin'], mbh=model['bh'],
+                              quiet=True, sigmapsf=model['sigmapsf'],
+                              pixsize=model['pixsize'], nrad=model['nrad'],
+                              shape=model['shape'])
+
         printModelInfo(model)
         printBoundaryPrior(model)
         nwalkers = model['nwalkers']

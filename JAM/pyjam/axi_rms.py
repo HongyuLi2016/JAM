@@ -448,6 +448,8 @@ class jam:
                              self.pot3d_pc, beta, self.tensor)
             surf = _mge_surf(self.lum_pc, self.xGrid,
                              self.yGrid, shape=self.shape)
+            self.flux = _mge_surf(self.lum_pc, self.xbin_pc,
+                                  self.ybin_pc, shape=self.shape)
             if not self.psfConvolution:
                 # interpolate to the input xbin, ybin
                 tem = np.sqrt((wvrms2/surf).reshape(len(self.ygrid),
@@ -476,8 +478,6 @@ class jam:
                 self.rmsModel =\
                     bilinear_interpolate(self.xcar, self.ycar, tem,
                                          self.xbin_pc, self.ybin_pc)
-                self.flux = _mge_surf(self.lum_pc, self.xbin_pc,
-                                      self.ybin_pc, shape=self.shape)
                 if self.tensor in ('xy', 'xz'):
                     self.rmsModel *= np.sign(self.xbin_pc*self.ybin_pc)
                 return self.rmsModel

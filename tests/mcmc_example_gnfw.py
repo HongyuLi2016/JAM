@@ -17,6 +17,7 @@ def test_emcee():
     lhy = JAM.mcmc_pyjam.mcmc(galaxy)
     # use set_config method to change model configurations
     # lhy.set_config('sigmapsf', 1.0)
+    # lhy.set_config('pixsize', 1.0)
     # change prior/boundary values
     # lhy.set_prior('gamma', [-1.0, 1e-4])  # fix gamma as -1.0 (i.e. NFW)
     # lhy.set_boundary('gamma', [-2.0, 0.0])
