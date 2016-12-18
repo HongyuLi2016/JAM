@@ -89,10 +89,10 @@ class mge:
       3d density is in [L_solar/pc^3]
     '''
     def __init__(self, mge2d, inc, shape='oblate', dist=None):
+        self.mge2d = mge2d.copy()
         if dist is not None:
             pc = dist * np.pi / 0.648
-            mge2d[:, 1] *= pc
-        self.mge2d = mge2d
+            self.mge2d[:, 1] *= pc
         self.inc = inc
         self.shape = shape
         self.ngauss = mge2d.shape[0]

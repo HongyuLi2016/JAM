@@ -3,6 +3,8 @@ from matplotlib import colors, colorbar
 import matplotlib.pyplot as plt
 import os
 JAMPATH = os.environ.get('JAMPATH')
+if JAMPATH is None:
+    raise RuntimeError('Enviroment variable JAMPAHT must be set')
 # from matplotlib.ticker import MaxNLocator
 _cdict = {'red': ((0.000,   0.01,   0.01),
                   (0.170,   0.0,    0.0),

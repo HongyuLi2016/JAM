@@ -193,6 +193,24 @@ class modelRst(object):
                            r'$\mathbf{r_s}$', r'$\mathbf{\gamma}$']
             # create dark halo mass mge object
             self.DmMge = util_mge.mge(dh.mge2d(), inc=self.inc)
+        elif self.data['type'] == 'spherical_gNFW_gas':
+            inc = self.inc
+            Beta = np.zeros(self.lum2d.shape[0]) + bestPars[1]
+            ml = bestPars[2]
+            logrho_s = bestPars[3]
+            rs = bestPars[4]
+            gamma = bestPars[5]
+            dh = util_dm.gnfw1d(10**logrho_s, rs, gamma)
+            dh_mge3d = dh.mge3d()
+            gas3d = self.data['gas3d']
+            dh_mge3d = np.append(gas3d, dh_mge3d, axis=0)
+            self.rmsModel = JAMmodel.run(inc, Beta, ml=ml, mge_dh=dh_mge3d)
+            self.flux = JAMmodel.flux
+            self.labels = [r'$\mathbf{cosi}$', r'$\mathbf{\beta}$',
+                           r'$\mathbf{M^*/L}$', r'$\mathbf{log\ \rho_s}$',
+                           r'$\mathbf{r_s}$', r'$\mathbf{\gamma}$']
+            # create dark halo mass mge object
+            self.DmMge = util_mge.mge(dh.mge2d(), inc=self.inc)
         else:
             raise ValueError('model type {} not supported')
 

@@ -80,6 +80,7 @@ class profile(modelRst):
         if self.data['bh'] is not None:
             totalProfiles[:, :, 1] += self.data['bh']  # add black hole mass
         self.profiles['total'] = totalProfiles
+        self.gas3d = self.data.get('gas3d', None)
 
     def save(self, fname='profiles.dat', outpath='.'):
         with open('{}/{}'.format(outpath, fname), 'wb') as f:
@@ -196,6 +197,16 @@ class profile(modelRst):
         axes[0].set_ylabel(r'$\mathbf{log_{10}\ \ \! \rho \,'
                            ' \ [M_{\odot}\ \ \! kpc^{-3}]}$',
                            fontproperties=label_font)
+        if self.gas3d is not None:
+            gas2d = util_mge.projection(self.gas3d, self.inc)
+            GasMge = util_mge.mge(gas2d, self.inc)
+            mass, density = _extractProfile(GasMge, r)
+            GasProfile = np.zeros([1, len(r), 2])
+            GasProfile[0, :, 0] = density
+            GasProfile[0, :, 1] = mass
+            self.profiles['gas'] = GasProfile
+            axes[0].plot(logr, np.log10(density[ii]), 'b', alpha=0.8, **kwargs)
+            axes[1].plot(logr, np.log10(mass[ii]), 'b', alpha=0.8, **kwargs)
         if true is not None:
             rtrue = true.get('r', None)
             if rtrue is None:

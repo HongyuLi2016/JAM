@@ -4,6 +4,7 @@ import emcee
 import JAM.pyjam as pyjam
 import JAM.utils.util_dm as util_dm
 import JAM.utils.util_mge as util_mge
+import JAM.utils.util_gas as util_gas
 from JAM.utils.util_rst import estimatePrameters, printParameters
 from JAM.utils.util_rst import printModelInfo, printBoundaryPrior
 from astropy.cosmology import Planck13
@@ -240,6 +241,34 @@ def lnprob_spherical_gNFW(pars, returnRms=False, returnChi2=False):
     return -0.5*chi2 + lnpriorValue
 
 
+def lnprob_spherical_gNFW_gas(pars, returnRms=False, returnChi2=False):
+    cosinc, beta, ml, logrho_s, rs, gamma = pars
+    # print pars
+    parsDic = {'cosinc': cosinc, 'beta': beta, 'ml': ml,
+               'logrho_s': logrho_s, 'rs': rs, 'gamma': gamma}
+    if np.isinf(check_boundary(parsDic)):
+        return -np.inf
+    lnpriorValue = lnprior(parsDic)
+    inc = np.arccos(cosinc)
+    Beta = np.zeros(model['lum2d'].shape[0]) + beta
+    sgnfJAM = model['JAM']
+    dh = util_dm.gnfw1d(10**logrho_s, rs, gamma)
+    dh_mge3d = dh.mge3d()
+    dh_mge3d = np.append(model['gas3d'], dh_mge3d, axis=0)  # add gas mge
+    rmsModel = sgnfJAM.run(inc, Beta, ml=ml, mge_dh=dh_mge3d)
+    if returnRms:
+        return rmsModel
+    chi2 = (((rmsModel[model['goodbins']] - model['rms'][model['goodbins']]) /
+             model['errRms'][model['goodbins']])**2).sum()
+    if returnChi2:
+        return chi2
+    if np.isnan(chi2):
+        print ('Warning - JAM return nan value, beta={:.2f} may not'
+               ' be correct'.format(beta))
+        return -np.inf
+    return -0.5*chi2 + lnpriorValue
+
+
 class mcmc:
     '''
     input parameter
@@ -353,6 +382,7 @@ class mcmc:
         model['goodbins'] = self.goodbins
         model['initGoodbins'] = self.goodbins.copy()
         model['bh'] = self.bh
+        model['Mgas'] = galaxy.get('Mgas', None)
         model['sigmapsf'] = galaxy.get('sigmapsf', 0.0)
         model['pixsize'] = galaxy.get('pixsize', 0.0)
         model['shape'] = self.shape
@@ -470,7 +500,7 @@ class mcmc:
         #     sys.exit(0)
         # Initialize sampler
         initSampler = \
-            emcee.EnsembleSampler(nwalkers, ndim, lnprob_massFollowLight,
+            emcee.EnsembleSampler(nwalkers, ndim, model['lnprob'],
                                   threads=threads)
         sampler = _runEmcee(initSampler, p0)
         # pool.close()
@@ -512,7 +542,55 @@ class mcmc:
             raise ValueError('p0 must be flat or fit, {} is '
                              'not supported'.format(model['p0']))
         initSampler = \
-            emcee.EnsembleSampler(nwalkers, ndim, lnprob_spherical_gNFW,
+            emcee.EnsembleSampler(nwalkers, ndim, model['lnprob'],
+                                  threads=threads)
+        sampler = _runEmcee(initSampler, p0)
+        # pool.close()
+        print '--------------------------------------------------'
+        print ('Finish! Total elapsed time: {:.2f}s'
+               .format(time()-self.startTime))
+        rst = analyzeRst(sampler)
+        model['rst'] = rst
+        dump()
+
+    def spherical_gNFW_gas(self):
+        print '--------------------------------------------------'
+        print 'spherical gNFW + gas model'
+        # calculate gas mge profile
+        if model['Mgas'] is None:
+            raise RuntimeError('Gas mass must be provided')
+        gas = util_gas.gas_exp(model['Mgas'])
+        model['gas3d'] = gas.mge3d
+        model['lnprob'] = lnprob_spherical_gNFW_gas
+        model['type'] = 'spherical_gNFW_gas'
+        model['ndim'] = 6
+        model['JAMpars'] = ['cosinc', 'beta', 'ml', 'logrho_s', 'rs', 'gamma']
+        # initialize the JAM class and pass to the global parameter
+        model['JAM'] = \
+            pyjam.axi_rms.jam(model['lum2d'], model['pot2d'], model['distance'],
+                              model['xbin'], model['ybin'], mbh=model['bh'],
+                              quiet=True, sigmapsf=model['sigmapsf'],
+                              pixsize=model['pixsize'], nrad=model['nrad'],
+                              shape=model['shape'])
+
+        printModelInfo(model)
+        print 'Gas Mass: {:.4e}'.format(model['Mgas'])
+        printBoundaryPrior(model)
+        nwalkers = model['nwalkers']
+        threads = model['threads']
+        ndim = model['ndim']
+        JAMpars = model['JAMpars']
+        if model['p0'] == 'flat':
+            p0 = flat_initp(JAMpars, nwalkers)
+        elif model['p0'] == 'fit':
+            print ('Calculate maximum lnprob positon from optimisiztion - not'
+                   'implemented yet')
+            exit(0)
+        else:
+            raise ValueError('p0 must be flat or fit, {} is '
+                             'not supported'.format(model['p0']))
+        initSampler = \
+            emcee.EnsembleSampler(nwalkers, ndim, model['lnprob'],
                                   threads=threads)
         sampler = _runEmcee(initSampler, p0)
         # pool.close()
