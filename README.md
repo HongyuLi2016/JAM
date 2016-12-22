@@ -60,6 +60,7 @@ Below is a brief description of the contents of the directories in the
     * `util_rst.py`: Analyze the output chains from MCMC.
     * `util_profile.py`: Extract profiles from the MCMC chain and make density/mass figures.
     * `util_gas.py`: Generate gas profiles given gas mass. This will be used in gasInluded-JAM model (TEST Version).
+    * `util_extract.py`: Load saved files and parameters (e.g. enclosed mass)
 
 --------
 Some other packages and test scripts
