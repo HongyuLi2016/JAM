@@ -124,10 +124,16 @@ class modelRst(object):
         self.maxPars = estimatePrameters(self.flatchain,
                                          flatlnprob=self.flatlnprob,
                                          method='max')
+        # estimate the errors
+        percentile = np.percentile(self.flatchain, [16, 50, 84], axis=0)
+        self.errPars = np.zeros([2, percentile.shape[1]])
+        self.errPars[0, :] = percentile[0, :] - percentile[1, :]
+        self.errPars[1, :] = percentile[2, :] - percentile[1, :]
         # choose the best parameter type
         switch = {'median': self.medianPars, 'mean': self.meanPars,
                   'peak': self.peakPars, 'max': self.maxPars}
         bestPars = switch[best]
+        self.bestPars_list = bestPars
         self.bestPars = {}
         for i, key in enumerate(self.data['JAMpars']):
             self.bestPars[key] = bestPars[i]
@@ -233,6 +239,9 @@ class modelRst(object):
         sigma_R = np.average(self.rms[i_in], weights=surf[i_in])
         return sigma_R
 
+    def lambda_R(self):
+        pass
+
     def cornerPlot(self, figname='mcmc.png', outpath='.',
                    clevel=[0.683, 0.95, 0.997], truths='max', true=None,
                    hbins=30, color=[0.8936, 0.5106, 0.2553], vmap='dots',
@@ -320,3 +329,47 @@ class modelRst(object):
                  xlabel='y arcsec')
         plt.tight_layout()
         fig.savefig('{}/{}'.format(outpath, figname), dpi=300)
+
+    def dump(self, outpath, name='rst.dat'):
+        data = {}
+        chi2 = np.sum((((self.data['rms'] - self.rmsModel) /
+                       self.data['errRms'])**2)[self.goodbins]) /\
+            self.goodbins.sum()
+        data['chi2dof'] = chi2
+        data['Re_arcsec'] = self.data['Re_arcsec']
+        data['dist'] = self.dist
+        data['JAMpars'] = self.data['JAMpars']
+        data['medianPars'] = self.medianPars
+        data['meanPars'] = self.meanPars
+        data['peakPars'] = self.peakPars
+        data['maxPars'] = self.maxPars
+        data['bestPars'] = self.bestPars_list
+        data['errPars'] = self.errPars
+        data['xbin'] = self.xbin
+        data['ybin'] = self.ybin
+        data['rms'] = self.data['rms']
+        data['errRms'] = self.data['errRms']
+        data['rmsModel'] = self.rmsModel
+        data['flux'] = self.flux
+        data['lum2d'] = self.lum2d
+        data['pot2d'] = self.pot2d
+        if self.DmMge is None:
+            data['dhmge2d'] = None
+        else:
+            data['dhmge2d'] = self.DmMge.mge2d
+        data['Disp_Re'] = self.meanDisp(data['Re_arcsec'])
+        with open('{}/{}'.format(outpath, name), 'wb') as f:
+            pickle.dump(data, f)
+        # save some info into txt file
+        f = open('{}/rst.txt'.format(outpath), 'w')
+        temp = ['{}: {:.3f}_{:+.3f}^{:+.3f}\n'
+                .format(data['JAMpars'][i], data['bestPars'][i],
+                        data['errPars'][0, i], data['errPars'][1, i])
+                for i in range(len(data['JAMpars']))]
+        f.write('dist: {:.3f} Mpc\n'.format(data['dist']))
+        f.write('Re_arcsec: {:.3f} arcsec\n'.format(data['Re_arcsec']))
+        f.write('sigma_Re: {:.3f} km/s\n'.format(data['Disp_Re']))
+        f.write('chi2/dof: {:.4f}\n'.format(data['chi2dof']))
+        f.write('chi2: {:.4f}\n'.format(data['chi2dof']*self.goodbins.sum()))
+        f.write(''.join(temp))
+        f.close()

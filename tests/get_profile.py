@@ -28,7 +28,8 @@ def main():
             'totalDens': np.log10(profileTotal), 'r': r}
     '--------------------------------------------------'
     profile = util_profile.profile('mock_gNFW_out.dat', path='data', nlines=200)
-    profile.plotProfiles(true=true)
+    profile.plotProfiles(true=true, outpath='data')
+    profile.save(outpath='data')
     # print lines
 
 
