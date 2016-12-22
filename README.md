@@ -38,7 +38,7 @@ Below is a brief description of the contents of the directories in the
  
  * `JAM`:  Main package for JAM modelling.
 
- * `JAM/cpyjam`: Contains the model souce codes (cython, to be developed)
+ * `JAM/cpyjam`: Contains the model souce codes and cJAM libraries (test version, to be improved, do not use)
 
  * `JAM/pyjam`: Contains the model souce codes (python)
     * `axi_rms.py`: main JAM modelling routine
@@ -58,6 +58,8 @@ Below is a brief description of the contents of the directories in the
     * `vprofile.py`: Plot velocity profiles alone some position angle.
     * `util_fig.py`: Some useful functions for figure plotting.
     * `util_rst.py`: Analyze the output chains from MCMC.
+    * `util_profile.py`: Extract profiles from the MCMC chain and make density/mass figures.
+    * `util_gas.py`: Generate gas profiles given gas mass. This will be used in gasInluded-JAM model (TEST Version).
 
 --------
 Some other packages and test scripts
@@ -66,6 +68,8 @@ Some other packages and test scripts
 * `tests`: Contains the test scripts
     * `oblate_test.py`: Comparison between the oblate model here and the original version (i.e. from Cappellari)
     * `prolate_test_spherical.py`: Comparison between oblate and prolate model in spherical case (q=1)
+    * `oblate_test_cpyjam.py`: Comparison between the oblate model (cpyjam) here and the original version (i.e. from Cappellari)
+    * `prolate_test_spherical_cpyjam.py`: Comparison between oblate and prolate model (cpyjam) in spherical case (q=1)
     * `mcmc_example_massFollowLight.py`: Fit a mass-follow-light JAM model to mock data with emcee.
     * `mcmc_example_gnfw.py`: Fit a spherical gNFW JAM model to mock data with emcee.
     * `rst_analysis.py`: Use util_rst.py to plot some figures and analyze results.
