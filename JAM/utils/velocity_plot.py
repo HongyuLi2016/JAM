@@ -64,7 +64,7 @@ def velocity_plot(x0, y0, v, ax=None, cmap=sauron, norm=None,
                     norm=norm, cmap=sauron, shape=shape)
     elif vmap == 'map':
         lhy_map(ax, x0[~nans], y0[~nans], v[~nans], vmin=vmin, vmax=vmax,
-                ncolors=64, markersize=1.5, norm=norm, cmap=cmap)
+                ncolors=64, markersize=markersize, norm=norm, cmap=cmap)
     else:
         raise ValueError('do not support vmap {}'.format(vmap))
 
