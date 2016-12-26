@@ -152,7 +152,7 @@ class modelRst(object):
 
         self.xbin = self.data['xbin']
         self.ybin = self.data['ybin']
-        self.rms = self.data['rms'].clip(0.0, 330.0)
+        self.rms = self.data['rms'].clip(0.0, 600.0)
         self.goodbins = self.data['goodbins']
         self.symetrizedRms = self.rms.copy()
         self.symetrizedRms[self.goodbins] = \
