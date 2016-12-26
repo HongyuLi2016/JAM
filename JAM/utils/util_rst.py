@@ -246,7 +246,7 @@ class modelRst(object):
                    clevel=[0.683, 0.95, 0.997], truths='max', true=None,
                    hbins=30, color=[0.8936, 0.5106, 0.2553], vmap='dots',
                    xpos=0.65, ypos=0.58, size=0.2, symetrize=False,
-                   residual=True, **kwargs):
+                   residual=True, markersize=1.0, **kwargs):
         switch = {'median': self.medianPars, 'mean': self.meanPars,
                   'peak': self.peakPars, 'max': self.maxPars,
                   'true': true}
@@ -293,10 +293,12 @@ class modelRst(object):
 
             velocity_plot(self.xbin, self.ybin, rms, ax=axes0b,
                           text='$\mathbf{V_{rms}: Obs}$', size=rDot,
-                          norm=norm, bar=False, vmap=vmap)
+                          norm=norm, bar=False, vmap=vmap,
+                          markersize=markersize)
             velocity_plot(self.xbin, self.ybin, self.rmsModel,
                           ax=axes0a, text='$\mathbf{V_{rms}: JAM}$',
-                          size=rDot, norm=norm, vmap=vmap)
+                          size=rDot, norm=norm, vmap=vmap,
+                          markersize=markersize)
             if residual:
                 residualValue = self.rmsModel - rms
                 vmax = \
@@ -305,7 +307,8 @@ class modelRst(object):
                 norm_residual = colors.Normalize(vmin=-vmax, vmax=vmax)
                 velocity_plot(self.xbin, self.ybin, residualValue, ax=axes0c,
                               text='$\mathbf{Residual}$', size=rDot,
-                              norm=norm_residual, vmap=vmap)
+                              norm=norm_residual, vmap=vmap,
+                              markersize=markersize)
         else:
             raise ValueError('vmap {} not supported'.format(vmap))
         fig.savefig('{}/{}'.format(outpath, figname), dpi=300)
