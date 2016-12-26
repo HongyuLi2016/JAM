@@ -41,7 +41,7 @@ def lhy_map(ax, x, y, vel, vmin=None, vmax=None,
     levels = np.linspace(vmin, vmax, ncolors)
     triangles = tri.Triangulation(x.ravel(), y.ravel())
     ax.tricontourf(triangles, vel.clip(vmin, vmax).ravel(),
-                   levels=levels, cmap=cmap)
+                   levels=levels, cmap=cmap, norm=norm)
     ax.plot(x, y, 'k.', markersize=markersize, alpha=1.)
 
 
