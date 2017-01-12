@@ -82,12 +82,15 @@ def equal_limits1(ax, lim=None):
     ax.set_ylim(lim)
 
 
-def equal_limits(ax, lim=None):
+def equal_limits(ax, lim=None, xreverse=True):
     if lim is None:
         xlim = ax.get_xlim()
         ylim = ax.get_ylim()
         lim = [min(xlim+ylim), max(xlim+ylim)]
-    ax.set_xlim(lim[::-1])
+    if xreverse:
+        ax.set_xlim(lim[::-1])
+    else:
+        ax.set_xlim(lim)
     ax.set_ylim(lim)
     fig = plt.gcf()
     pos = ax.get_position()
@@ -101,8 +104,9 @@ def equal_limits(ax, lim=None):
 
 
 def add_colorbar(ax, cmap, norm, width=0.02, position='right',
-                 barlabel='', **kwargs):
-    fig = plt.gcf()
+                 barlabel='', fig=None, **kwargs):
+    if fig is None:
+        fig = plt.gcf()
 
     pos = ax.get_position()
     if position == 'right':

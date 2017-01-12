@@ -190,6 +190,12 @@ class modelRst(object):
             logrho_s = bestPars[3]
             rs = bestPars[4]
             gamma = bestPars[5]
+            # inc = np.radians(85.0)
+            # Beta = np.zeros(self.lum2d.shape[0]) + 0.15
+            # ml = 3.8
+            # logrho_s = 5.8 + np.log10(3.8)
+            # rs = 40.0
+            # gamma = -1.2
             dh = util_dm.gnfw1d(10**logrho_s, rs, gamma)
             dh_mge3d = dh.mge3d()
             self.rmsModel = JAMmodel.run(inc, Beta, ml=ml, mge_dh=dh_mge3d)
