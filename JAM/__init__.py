@@ -1,6 +1,6 @@
 import utils
 import pyjam
-import cpyjam
+# import cpyjam
 import mcmc
 from JAM.mcmc import mcmc_pyjam
 #from mcmc import mcmc_pyjam # alternitive
