@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import util_mge
 import util_dm
 import matplotlib.pyplot as plt

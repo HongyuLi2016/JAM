@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import pickle
 from scipy.stats import gaussian_kde
 from scipy import stats
