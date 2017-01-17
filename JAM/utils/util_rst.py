@@ -247,8 +247,16 @@ class modelRst(object):
         sigma_R = np.average(self.rms[i_in], weights=surf[i_in])
         return sigma_R
 
-    def lambda_R(self):
-        pass
+    def lambda_R(self, R):
+        r = np.sqrt(self.xbin**2 + self.ybin**2)
+        i_R = r < R
+        vel = self.data['vel']
+        if vel is None:
+            return np.nan
+        else:
+            rst = np.average(r[i_R]*abs(vel[i_R]), weights=self.flux[i_R]) /\
+                np.average(r[i_R]*self.rms[i_R], weights=self.flux[i_R])
+            return rst
 
     def cornerPlot(self, figname='mcmc.png', outpath='.',
                    clevel=[0.683, 0.95, 0.997], truths='max', true=None,
@@ -369,6 +377,7 @@ class modelRst(object):
         else:
             data['dhmge2d'] = self.DmMge.mge2d
         data['Disp_Re'] = self.meanDisp(data['Re_arcsec'])
+        data['lambda_Re'] = self.lambda_R(data['Re_arcsec'])
         with open('{}/{}'.format(outpath, name), 'wb') as f:
             pickle.dump(data, f)
         # save some info into txt file
@@ -380,6 +389,7 @@ class modelRst(object):
         f.write('dist: {:.3f} Mpc\n'.format(data['dist']))
         f.write('Re_arcsec: {:.3f} arcsec\n'.format(data['Re_arcsec']))
         f.write('sigma_Re: {:.3f} km/s\n'.format(data['Disp_Re']))
+        f.write('lambda_Re: {:.3f}\n'.format(data['lambda_Re']))
         f.write('chi2/dof: {:.4f}\n'.format(data['chi2dof']))
         f.write('chi2: {:.4f}\n'.format(data['chi2dof']*self.goodbins.sum()))
         f.write(''.join(temp))
