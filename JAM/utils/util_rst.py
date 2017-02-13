@@ -243,14 +243,14 @@ class modelRst(object):
                            dist=self.dist)
         surf = mge.surfaceBrightness(self.xbin*self.pc, self.ybin*self.pc)
         r = np.sqrt(self.xbin**2 + self.ybin**2)
-        i_in = r < R
+        i_in = (r < R) * self.goodbins
         sigma_R = np.average(self.rms[i_in], weights=surf[i_in])
         return sigma_R
 
     def lambda_R(self, R):
         r = np.sqrt(self.xbin**2 + self.ybin**2)
-        i_R = r < R
         vel = self.data['vel']
+        i_R = (r < R) * self.goodbins
         if vel is None:
             return np.nan
         else:
