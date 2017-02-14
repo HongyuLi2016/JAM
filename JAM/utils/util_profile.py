@@ -37,6 +37,7 @@ def _plotProfile(r, profiles, ax=None, **kwargs):
 
 
 class profile(modelRst):
+
     def __init__(self, name, path='.', burnin=0, nlines=200, r=None):
         super(profile, self).__init__(name, path=path, burnin=burnin,
                                       best='median')
@@ -83,6 +84,18 @@ class profile(modelRst):
             totalProfiles[:, :, 1] += self.data['bh']  # add black hole mass
         self.profiles['total'] = totalProfiles
         self.gas3d = self.data.get('gas3d', None)
+        Re_kpc = self.data['Re_arcsec'] * self.pc / 1e3
+        MassRe = {}
+        MassRe['stellar'] = \
+            np.log10(self.enclosed3DStellarMass(Re_kpc)[0])
+        MassRe['dark'] = self.enclosed3DdarkMass(Re_kpc)
+        MassRe['total'] = np.log10(self.enclosed3DTotalMass(Re_kpc)[0])
+        if MassRe['dark'] is not None:
+            MassRe['dark'] = np.log10(MassRe['dark'][0])
+            MassRe['fdm'] = 10**(MassRe['dark']-MassRe['total'])
+        else:
+            MassRe['fdm'] = None
+        self.profiles['MassRe'] = MassRe
 
     def save(self, fname='profiles.dat', outpath='.'):
         with open('{}/{}'.format(outpath, fname), 'wb') as f:
@@ -155,17 +168,9 @@ class profile(modelRst):
         Re_kpc = self.data['Re_arcsec'] * self.pc / 1e3
         dataRange = np.percentile(np.sqrt(self.xbin**2+self.ybin**2), 95) * \
             self.pc / 1e3
-        MassRe = {}
-        MassRe['stellar'] = np.log10(self.enclosed3DStellarMass(Re_kpc)[0])
-        MassRe['dark'] = self.enclosed3DdarkMass(Re_kpc)
-        MassRe['total'] = np.log10(self.enclosed3DTotalMass(Re_kpc)[0])
-        if MassRe['dark'] is not None:
-            MassRe['dark'] = np.log10(MassRe['dark'][0])
-            MassRe['fdm'] = 10**(MassRe['dark']-MassRe['total'])
-        else:
-            MassRe['fdm'] = None
         if Range is None:
             Range = [0.5, nre*Re_kpc]
+        MassRe = self.profiles['MassRe']
         fig, axes = plt.subplots(2, 1, figsize=(6, 6), sharex=True)
         fig.subplots_adjust(left=0.12, bottom=0.08, right=0.98,
                             top=0.98, wspace=0.1, hspace=0.1)
@@ -231,16 +236,16 @@ class profile(modelRst):
             ax.axvline(np.log10(dataRange), ls="dashed", color='g',
                        linewidth=2)
         axes[0].text(0.05, 0.05, '$\mathbf{M^*(R_e)}$: %4.2f'
-                     %(MassRe['stellar']), transform=axes[0].transAxes,
+                     % (MassRe['stellar']), transform=axes[0].transAxes,
                      fontproperties=text_font)
         axes[0].text(0.35, 0.05, '$\mathbf{M^T(R_e)}$: %4.2f'
-                     %(MassRe['total']), transform=axes[0].transAxes,
+                     % (MassRe['total']), transform=axes[0].transAxes,
                      fontproperties=text_font)
-        axes[0].text(0.05, 0.25, '$\mathbf{M^*/L}$: %4.2f'%(self.ml),
+        axes[0].text(0.05, 0.25, '$\mathbf{M^*/L}$: %4.2f' % (self.ml),
                      transform=axes[0].transAxes, fontproperties=text_font)
         if MassRe['fdm'] is not None:
             axes[0].text(0.35, 0.25, '$\mathbf{f_{DM}(R_e)}$: %4.2f'
-                         %(MassRe['fdm']), transform=axes[0].transAxes,
+                         % (MassRe['fdm']), transform=axes[0].transAxes,
                          fontproperties=text_font)
         if MassRe['fdm'] is not None:
             axes[1].text(0.85, 0.05, 'Total', color='c',
