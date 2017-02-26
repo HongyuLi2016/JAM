@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import numpy as np
 import emcee
+from scipy.optimize import minimize
 import JAM.pyjam as pyjam
 import JAM.utils.util_dm as util_dm
 import JAM.utils.util_mge as util_mge
@@ -161,7 +162,7 @@ def _sigmaClip(sampler, pos):
             print ('clip too many pixels: goodbin fraction < {:.2f}'
                    .format(model['minFraction']))
             break
-    return sampler
+    return sampler, pos
 
 
 def _runEmcee(sampler, p0):
@@ -181,7 +182,7 @@ def _runEmcee(sampler, p0):
     if model['clip'] == 'noclip':
         pass
     elif model['clip'] == 'sigma':
-        sampler = _sigmaClip(sampler, pos)
+        sampler, pos = _sigmaClip(sampler, pos)
     else:
         raise ValueError('clip value {} not supported'
                          .format(model['clip']))
@@ -195,6 +196,8 @@ def lnprob_massFollowLight(pars, returnRms=False, returnChi2=False):
     # print pars
     parsDic = {'cosinc': cosinc, 'beta': beta, 'ml': ml}
     if np.isinf(check_boundary(parsDic)):
+        if returnChi2:
+            return np.inf
         return -np.inf
     lnpriorValue = lnprior(parsDic)
     inc = np.arccos(cosinc)
@@ -220,6 +223,8 @@ def lnprob_spherical_gNFW(pars, returnRms=False, returnChi2=False):
     parsDic = {'cosinc': cosinc, 'beta': beta, 'ml': ml,
                'logrho_s': logrho_s, 'rs': rs, 'gamma': gamma}
     if np.isinf(check_boundary(parsDic)):
+        if returnChi2:
+            return np.inf
         return -np.inf
     lnpriorValue = lnprior(parsDic)
     inc = np.arccos(cosinc)
@@ -247,6 +252,8 @@ def lnprob_spherical_gNFW_gas(pars, returnRms=False, returnChi2=False):
     parsDic = {'cosinc': cosinc, 'beta': beta, 'ml': ml,
                'logrho_s': logrho_s, 'rs': rs, 'gamma': gamma}
     if np.isinf(check_boundary(parsDic)):
+        if returnChi2:
+            return np.inf
         return -np.inf
     lnpriorValue = lnprior(parsDic)
     inc = np.arccos(cosinc)
@@ -474,7 +481,8 @@ class mcmc:
         model['JAMpars'] = ['cosinc', 'beta', 'ml']
         # initialize the JAM class and pass to the global parameter
         model['JAM'] = \
-            pyjam.axi_rms.jam(model['lum2d'], model['pot2d'], model['distance'],
+            pyjam.axi_rms.jam(model['lum2d'], model['pot2d'],
+                              model['distance'],
                               model['xbin'], model['ybin'], mbh=model['bh'],
                               quiet=True, sigmapsf=model['sigmapsf'],
                               pixsize=model['pixsize'], nrad=model['nrad'],
@@ -520,7 +528,8 @@ class mcmc:
         model['JAMpars'] = ['cosinc', 'beta', 'ml', 'logrho_s', 'rs', 'gamma']
         # initialize the JAM class and pass to the global parameter
         model['JAM'] = \
-            pyjam.axi_rms.jam(model['lum2d'], model['pot2d'], model['distance'],
+            pyjam.axi_rms.jam(model['lum2d'], model['pot2d'],
+                              model['distance'],
                               model['xbin'], model['ybin'], mbh=model['bh'],
                               quiet=True, sigmapsf=model['sigmapsf'],
                               pixsize=model['pixsize'], nrad=model['nrad'],
@@ -567,7 +576,8 @@ class mcmc:
         model['JAMpars'] = ['cosinc', 'beta', 'ml', 'logrho_s', 'rs', 'gamma']
         # initialize the JAM class and pass to the global parameter
         model['JAM'] = \
-            pyjam.axi_rms.jam(model['lum2d'], model['pot2d'], model['distance'],
+            pyjam.axi_rms.jam(model['lum2d'], model['pot2d'],
+                              model['distance'],
                               model['xbin'], model['ybin'], mbh=model['bh'],
                               quiet=True, sigmapsf=model['sigmapsf'],
                               pixsize=model['pixsize'], nrad=model['nrad'],
@@ -600,3 +610,37 @@ class mcmc:
         rst = analyzeRst(sampler)
         model['rst'] = rst
         dump()
+
+    def chi2_spherical_gNFW(self, p0=None, ftol=1e-10):
+        print '--------------------------------------------------'
+        print 'Minimize chi2 for spherical gNFW model'
+        model['lnprob'] = lnprob_spherical_gNFW
+        model['type'] = 'spherical_gNFW'
+        model['ndim'] = 6
+        model['JAMpars'] = ['cosinc', 'beta', 'ml', 'logrho_s', 'rs', 'gamma']
+        # initialize the JAM class and pass to the global parameter
+        model['JAM'] = \
+            pyjam.axi_rms.jam(model['lum2d'], model['pot2d'],
+                              model['distance'],
+                              model['xbin'], model['ybin'], mbh=model['bh'],
+                              quiet=True, sigmapsf=model['sigmapsf'],
+                              pixsize=model['pixsize'], nrad=model['nrad'],
+                              shape=model['shape'])
+        par = [np.cos(np.radians(80.0)), 0.01, 0.6, 7.9 + np.log10(3.8),
+               13.0, -0.2]
+        if p0 is None:
+            p0 = par
+        bounds = [boundary[key] for key in model['JAMpars']]
+        options = {}
+        options['ftol'] = ftol
+        res = minimize(lnprob_spherical_gNFW, par, args=(False, True),
+                       bounds=bounds, method='SLSQP', options=options)
+        print p0
+        print res.x
+        # printModelInfo(model)
+        # printBoundaryPrior(model)
+        # nwalkers = model['nwalkers']
+        # threads = model['threads']
+        # ndim = model['ndim']
+        # JAMpars = model['JAMpars']
+        print '--------------------------------------------------'
