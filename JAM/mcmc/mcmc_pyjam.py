@@ -2,15 +2,19 @@
 import numpy as np
 import emcee
 from scipy.optimize import minimize
+from scipy import stats
 import JAM.pyjam as pyjam
 import JAM.utils.util_dm as util_dm
 import JAM.utils.util_mge as util_mge
 import JAM.utils.util_gas as util_gas
+import JAM.utils.velocity_plot as velocity_plot
 from JAM.utils.util_rst import estimatePrameters, printParameters
 from JAM.utils.util_rst import printModelInfo, printBoundaryPrior
 from astropy.cosmology import Planck13
 from time import time, localtime, strftime
 import pickle
+import matplotlib.pyplot as plt
+from matplotlib import colors
 # from emcee.utils import MPIPool
 # import sys
 
@@ -611,7 +615,7 @@ class mcmc:
         model['rst'] = rst
         dump()
 
-    def chi2_spherical_gNFW(self, p0=None, ftol=1e-10):
+    def chi2_spherical_gNFW(self, p0=None, options=None, method='Nelder-Mead'):
         print '--------------------------------------------------'
         print 'Minimize chi2 for spherical gNFW model'
         model['lnprob'] = lnprob_spherical_gNFW
@@ -631,12 +635,17 @@ class mcmc:
         if p0 is None:
             p0 = par
         bounds = [boundary[key] for key in model['JAMpars']]
-        options = {}
-        options['ftol'] = ftol
-        res = minimize(lnprob_spherical_gNFW, par, args=(False, True),
-                       bounds=bounds, method='SLSQP', options=options)
-        print p0
-        print res.x
+        if options is None:
+            options = {}
+            # options['ftol'] = 1e-10
+        res = minimize(lnprob_spherical_gNFW, p0, args=(False, True),
+                       bounds=bounds, method=method, options=options)
+        for i in range(len(p0)):
+            print 'Init: {:10.6f} fit: {:10.6f}'.format(p0[i], res.x[i])
+        chi2 = lnprob_spherical_gNFW(res.x, False, True)
+        print 'chi2: {:.4f}'.format(chi2)
+        chi2 = lnprob_spherical_gNFW(p0, False, True)
+        print 'chi2: {:.4f}'.format(chi2)
         # printModelInfo(model)
         # printBoundaryPrior(model)
         # nwalkers = model['nwalkers']
@@ -644,3 +653,71 @@ class mcmc:
         # ndim = model['ndim']
         # JAMpars = model['JAMpars']
         print '--------------------------------------------------'
+
+    def run_spherical_gNFW(self, par, plot=False, save=True, path='./',
+                           fname='single_rst', vmap='map', markersize=0.5,
+                           rDot=0.24):
+        print '--------------------------------------------------'
+        print 'Run spherical gNFW model with given parameters'
+        model['lnprob'] = lnprob_spherical_gNFW
+        model['type'] = 'spherical_gNFW'
+        model['ndim'] = 6
+        model['JAMpars'] = ['cosinc', 'beta', 'ml', 'logrho_s', 'rs', 'gamma']
+        # initialize the JAM class and pass to the global parameter
+        model['JAM'] = \
+            pyjam.axi_rms.jam(model['lum2d'], model['pot2d'],
+                              model['distance'],
+                              model['xbin'], model['ybin'], mbh=model['bh'],
+                              quiet=True, sigmapsf=model['sigmapsf'],
+                              pixsize=model['pixsize'], nrad=model['nrad'],
+                              shape=model['shape'])
+        rmsModel = lnprob_spherical_gNFW(par, True, False)
+        xbin = model['xbin']
+        ybin = model['ybin']
+        rms = self.rms
+        errRms = self.errRms
+        goodbins = self.goodbins
+        chi2 = np.sum(((rms[goodbins] - rmsModel[goodbins]) /
+                       errRms[goodbins])**2)
+        chi2_dof = chi2/goodbins.sum()
+        for i in range(len(par)):
+            print '{}: {:.4f}'.format(model['JAMpars'][i], par[i])
+        print 'chi2: {:.4f}'.format(chi2)
+        print 'chi2/dof: {:.4f}'.format(chi2_dof)
+        print '--------------------------------------------------'
+
+        rst = {'xbin': xbin, 'ybin': ybin, 'rms': rms, 'errRms': errRms,
+               'goodbins': goodbins, 'rmsModel': rmsModel, 'chi2': chi2,
+               'chi2_dof': chi2_dof, 'pars': par}
+        if save:
+            with open('{}/{}.dat'.format(path, fname), 'wb') as f:
+                pickle.dump(rst, f)
+        if plot:
+            fig = plt.figure(figsize=(18/1.5, 5./1.5))
+            axes0a = fig.add_subplot(131)
+            axes0b = fig.add_subplot(132)
+            axes0c = fig.add_subplot(133)
+            fig.subplots_adjust(left=0.05, bottom=0.1, right=0.92,
+                                top=0.99, wspace=0.4)
+            vmin, vmax = stats.scoreatpercentile(rms[goodbins],
+                                                 [0.5, 99.5])
+            norm = colors.Normalize(vmin=vmin, vmax=vmax)
+            velocity_plot(xbin, ybin, rms, ax=axes0b,
+                          text='$\mathbf{V_{rms}: Obs}$', size=rDot,
+                          norm=norm,  vmap=vmap,
+                          markersize=markersize)
+            velocity_plot(xbin, ybin, rmsModel,
+                          ax=axes0a, text='$\mathbf{V_{rms}: JAM}$',
+                          size=rDot, norm=norm, bar=False, vmap=vmap,
+                          markersize=markersize)
+            residualValue = rmsModel - rms
+            vmax = \
+                stats.scoreatpercentile(abs(residualValue[goodbins])
+                                        .clip(-100, 100.), 99.5)
+            norm_residual = colors.Normalize(vmin=-vmax, vmax=vmax)
+            velocity_plot(xbin, ybin, residualValue, ax=axes0c,
+                          text='$\mathbf{Residual}$', size=rDot,
+                          norm=norm_residual, vmap=vmap,
+                          markersize=markersize)
+            fig.savefig('{}/{}.png'.format(path, fname), dpi=300)
+        return rst
