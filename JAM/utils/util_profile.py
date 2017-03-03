@@ -36,8 +36,17 @@ def _plotProfile(r, profiles, ax=None, **kwargs):
     ax.plot(r, profiles, **kwargs)
 
 
-class profile(modelRst):
+def ml_gradient(sigma, delta, ml0=1.0):
+    '''
+    Create a M*L gradient
+    sigma: Gaussian sigma in Re
+    delta: Gradient value
+    ml0: Central stellar mass to light ratio
+    '''
+    return ml0 * (1 + delta * sigma).clip(0.1)
 
+
+class profile(modelRst):
     def __init__(self, name, path='.', burnin=0, nlines=200, r=None):
         super(profile, self).__init__(name, path=path, burnin=burnin,
                                       best='median')
@@ -49,33 +58,72 @@ class profile(modelRst):
         ntotal = self.flatchain.shape[0]
         step = ntotal / nlines
         if step == 0:
-            raise RuntimeWarning('nlines > total number of samples')
+            print('Warning - nlines > total number of samples')
             step = 1
         ii = np.zeros(ntotal, dtype=bool)
         ii[::step] = True
         self.profiles['nprofiles'] = ii.sum()
-        # Calculate stellar mass profiles
+
         stellarProfiles = np.zeros([len(r), ii.sum(), 2])
         mls = self.flatchain[ii, 2].ravel()
-        mass, density = _extractProfile(self.LmMge, r)
-        for i in range(ii.sum()):
-            stellarProfiles[:, i, 0] = mls[i] * density
-            stellarProfiles[:, i, 1] = mls[i] * mass
-        self.profiles['stellar'] = stellarProfiles
-        # Calculate dark matter profiles
-        if self.DmMge is None:
-            self.profiles['dark'] = None
-        else:
-            darkProfiles = np.zeros_like(stellarProfiles)
-            logrho_s = self.flatchain[ii, 3].ravel()
-            rs = self.flatchain[ii, 4].ravel()
-            gamma = self.flatchain[ii, 5].ravel()
+        if self.data['type'] in ['spherical_gNFW', 'spherical_gNFW_gas']:
+            # Calculate stellar mass profiles
+            mass, density = _extractProfile(self.LmMge, r)
             for i in range(ii.sum()):
-                tem_dh = util_dm.gnfw1d(10**logrho_s[i], rs[i], gamma[i])
-                darkProfiles[:, i, 0] = tem_dh.densityProfile(r)
-                for j in range(len(r)):
-                    darkProfiles[j, i, 1] = tem_dh.enclosedMass(r[j])
-            self.profiles['dark'] = darkProfiles
+                stellarProfiles[:, i, 0] = mls[i] * density
+                stellarProfiles[:, i, 1] = mls[i] * mass
+            self.profiles['stellar'] = stellarProfiles
+            # Calculate dark matter profiles
+            if self.DmMge is None:
+                self.profiles['dark'] = None
+            else:
+                darkProfiles = np.zeros_like(stellarProfiles)
+                logrho_s = self.flatchain[ii, 3].ravel()
+                rs = self.flatchain[ii, 4].ravel()
+                gamma = self.flatchain[ii, 5].ravel()
+                for i in range(ii.sum()):
+                    tem_dh = util_dm.gnfw1d(10**logrho_s[i], rs[i], gamma[i])
+                    darkProfiles[:, i, 0] = tem_dh.densityProfile(r)
+                    for j in range(len(r)):
+                        darkProfiles[j, i, 1] = tem_dh.enclosedMass(r[j])
+                self.profiles['dark'] = darkProfiles
+        elif self.data['type'] == 'spherical_gNFW_gradient':
+            # Calculate stellar mass profiles
+            pot_ng = self.pot2d.copy()
+            pot_tem = np.zeros([1, 3])
+            sigma = pot_ng[:, 1]/self.data['Re_arcsec']
+            delta = self.flatchain[ii, 3].ravel()
+            mass = np.zeros([len(r), pot_ng.shape[0]])
+            density = np.zeros([len(r), pot_ng.shape[0]])
+            for i in range(pot_ng.shape[0]):
+                pot_tem[:, :] = pot_ng[i, :]
+                mge_pot = util_mge.mge(pot_tem, inc=self.inc,
+                                       shape=self.shape, dist=self.dist)
+                mass[:, i], density[:, i] = _extractProfile(mge_pot, r)
+            for i in range(ii.sum()):
+                ML = ml_gradient(sigma, delta[i], mls[i])
+                stellarProfiles[:, i, 0] = np.sum(ML * density, axis=1)
+                stellarProfiles[:, i, 1] = np.sum(ML * mass, axis=1)
+            self.profiles['stellar'] = stellarProfiles
+
+            # Calculate dark matter profiles
+            if self.DmMge is None:
+                self.profiles['dark'] = None
+            else:
+                darkProfiles = np.zeros_like(stellarProfiles)
+                logrho_s = self.flatchain[ii, 4].ravel()
+                rs = self.flatchain[ii, 5].ravel()
+                gamma = self.flatchain[ii, 6].ravel()
+                for i in range(ii.sum()):
+                    tem_dh = util_dm.gnfw1d(10**logrho_s[i], rs[i], gamma[i])
+                    darkProfiles[:, i, 0] = tem_dh.densityProfile(r)
+                    for j in range(len(r)):
+                        darkProfiles[j, i, 1] = tem_dh.enclosedMass(r[j])
+                self.profiles['dark'] = darkProfiles
+        else:
+            raise ValueError('model type {} not supported'
+                             .format(self.data['type']))
+
         # calculate total profiles
         totalProfiles = stellarProfiles.copy()
         if self.profiles['dark'] is not None:

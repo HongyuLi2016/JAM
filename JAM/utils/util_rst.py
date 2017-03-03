@@ -96,6 +96,16 @@ def estimatePrameters(flatchain, method='median', flatlnprob=None):
         raise ValueError('Do not support {} method'.format(method))
 
 
+def ml_gradient(sigma, delta, ml0=1.0):
+    '''
+    Create a M*L gradient
+    sigma: Gaussian sigma in Re
+    delta: Gradient value
+    ml0: Central stellar mass to light ratio
+    '''
+    return ml0 * (1 + delta * sigma).clip(0.1)
+
+
 class modelRst(object):
     def __init__(self, name, path='.', burnin=0, best='median'):
         self.data = load(name, path=path)
@@ -192,12 +202,6 @@ class modelRst(object):
             logrho_s = bestPars[3]
             rs = bestPars[4]
             gamma = bestPars[5]
-            # inc = np.radians(85.0)
-            # Beta = np.zeros(self.lum2d.shape[0]) + 0.15
-            # ml = 3.8
-            # logrho_s = 5.8 + np.log10(3.8)
-            # rs = 40.0
-            # gamma = -1.2
             dh = util_dm.gnfw1d(10**logrho_s, rs, gamma)
             dh_mge3d = dh.mge3d()
             self.rmsModel = JAMmodel.run(inc, Beta, ml=ml, mge_dh=dh_mge3d)
@@ -225,8 +229,29 @@ class modelRst(object):
                            r'$\mathbf{r_s}$', r'$\mathbf{\gamma}$']
             # create dark halo mass mge object
             self.DmMge = util_mge.mge(dh.mge2d(), inc=self.inc)
+        elif self.data['type'] == 'spherical_gNFW_gradient':
+            inc = self.inc
+            Beta = np.zeros(self.lum2d.shape[0]) + bestPars[1]
+            ml = bestPars[2]
+            delta = bestPars[3]
+            sigma = self.pot2d[:, 1] / self.data['Re_arcsec']
+            ML = ml_gradient(sigma, delta, ml0=ml)
+            logrho_s = bestPars[4]
+            rs = bestPars[5]
+            gamma = bestPars[6]
+            dh = util_dm.gnfw1d(10**logrho_s, rs, gamma)
+            dh_mge3d = dh.mge3d()
+            self.rmsModel = JAMmodel.run(inc, Beta, ml=ML, mge_dh=dh_mge3d)
+            self.flux = JAMmodel.flux
+            self.labels = [r'$\mathbf{cosi}$', r'$\mathbf{\beta}$',
+                           r'$\mathbf{M^*/L}$', r'$\mathbf{\Delta_{IMF}}$',
+                           r'$\mathbf{log\ \rho_s}$',
+                           r'$\mathbf{r_s}$', r'$\mathbf{\gamma}$']
+            # create dark halo mass mge object
+            self.DmMge = util_mge.mge(dh.mge2d(), inc=self.inc)
         else:
-            raise ValueError('model type {} not supported')
+            raise ValueError('model type {} not supported'
+                             .format(self.data['type']))
 
     def printInfo(self):
         printModelInfo(self.data)

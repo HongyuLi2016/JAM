@@ -20,12 +20,13 @@ from matplotlib import colors
 
 # parameter boundaries. [lower, upper]
 boundary = {'cosinc': [0.0, 1.0], 'beta': [0.0, 0.4], 'logrho_s': [3.0, 10.0],
-            'rs': [5.0, 45.0], 'gamma': [-1.6, 0.0], 'ml': [0.5, 15]
+            'rs': [5.0, 45.0], 'gamma': [-1.6, 0.0], 'ml': [0.5, 15],
+            'delta': [-0.3, 0.0]
             }
 # parameter gaussian priors. [mean, sigma]
 prior = {'cosinc': [0.0, 1e4], 'beta': [0.0, 1e4], 'logrho_s': [5.0, 1e4],
-         'rs': [10.0, 1e4], 'gamma': [-1.0, 1e4], 'ml': [1.0, 1e4]
-         }
+         'rs': [10.0, 1e4], 'gamma': [-1.0, 1e4], 'ml': [1.0, 1e4],
+         'delta': [0.0, 1e4]}
 
 model = {'boundary': boundary, 'prior': prior}
 
@@ -123,6 +124,16 @@ def analyzeRst(sampler, nburnin=0):
 def dump():
     with open('{}/{}'.format(model['outfolder'], model['fname']), 'wb') as f:
         pickle.dump(model, f)
+
+
+def ml_gradient(sigma, delta, ml0=1.0):
+    '''
+    Create a M*L gradient
+    sigma: Gaussian sigma in Re
+    delta: Gradient value
+    ml0: Central stellar mass to light ratio
+    '''
+    return ml0 * (1 + delta * sigma).clip(0.1)
 
 
 def _sigmaClip(sampler, pos):
@@ -237,6 +248,37 @@ def lnprob_spherical_gNFW(pars, returnRms=False, returnChi2=False):
     dh = util_dm.gnfw1d(10**logrho_s, rs, gamma)
     dh_mge3d = dh.mge3d()
     rmsModel = sgnfJAM.run(inc, Beta, ml=ml, mge_dh=dh_mge3d)
+    if returnRms:
+        return rmsModel
+    chi2 = (((rmsModel[model['goodbins']] - model['rms'][model['goodbins']]) /
+             model['errRms'][model['goodbins']])**2).sum()
+    if returnChi2:
+        return chi2
+    if np.isnan(chi2):
+        print ('Warning - JAM return nan value, beta={:.2f} may not'
+               ' be correct'.format(beta))
+        return -np.inf
+    return -0.5*chi2 + lnpriorValue
+
+
+def lnprob_spherical_gNFW_gradient(pars, returnRms=False, returnChi2=False):
+    cosinc, beta, ml, delta, logrho_s, rs, gamma = pars
+    # print pars
+    parsDic = {'cosinc': cosinc, 'beta': beta, 'ml': ml, 'delta': delta,
+               'logrho_s': logrho_s, 'rs': rs, 'gamma': gamma}
+    if np.isinf(check_boundary(parsDic)):
+        if returnChi2:
+            return np.inf
+        return -np.inf
+    lnpriorValue = lnprior(parsDic)
+    inc = np.arccos(cosinc)
+    Beta = np.zeros(model['lum2d'].shape[0]) + beta
+    sigma = model['pot2d'][:, 1] / model['Re_arcsec']
+    ML = ml_gradient(sigma, delta, ml0=ml)
+    sgnfgJAM = model['JAM']
+    dh = util_dm.gnfw1d(10**logrho_s, rs, gamma)
+    dh_mge3d = dh.mge3d()
+    rmsModel = sgnfgJAM.run(inc, Beta, ml=ML, mge_dh=dh_mge3d)
     if returnRms:
         return rmsModel
     chi2 = (((rmsModel[model['goodbins']] - model['rms'][model['goodbins']]) /
@@ -530,6 +572,50 @@ class mcmc:
         model['type'] = 'spherical_gNFW'
         model['ndim'] = 6
         model['JAMpars'] = ['cosinc', 'beta', 'ml', 'logrho_s', 'rs', 'gamma']
+        # initialize the JAM class and pass to the global parameter
+        model['JAM'] = \
+            pyjam.axi_rms.jam(model['lum2d'], model['pot2d'],
+                              model['distance'],
+                              model['xbin'], model['ybin'], mbh=model['bh'],
+                              quiet=True, sigmapsf=model['sigmapsf'],
+                              pixsize=model['pixsize'], nrad=model['nrad'],
+                              shape=model['shape'])
+
+        printModelInfo(model)
+        printBoundaryPrior(model)
+        nwalkers = model['nwalkers']
+        threads = model['threads']
+        ndim = model['ndim']
+        JAMpars = model['JAMpars']
+        if model['p0'] == 'flat':
+            p0 = flat_initp(JAMpars, nwalkers)
+        elif model['p0'] == 'fit':
+            print ('Calculate maximum lnprob positon from optimisiztion - not'
+                   'implemented yet')
+            exit(0)
+        else:
+            raise ValueError('p0 must be flat or fit, {} is '
+                             'not supported'.format(model['p0']))
+        initSampler = \
+            emcee.EnsembleSampler(nwalkers, ndim, model['lnprob'],
+                                  threads=threads)
+        sampler = _runEmcee(initSampler, p0)
+        # pool.close()
+        print '--------------------------------------------------'
+        print ('Finish! Total elapsed time: {:.2f}s'
+               .format(time()-self.startTime))
+        rst = analyzeRst(sampler)
+        model['rst'] = rst
+        dump()
+
+    def spherical_gNFW_gradient(self):
+        print '--------------------------------------------------'
+        print 'spherical gNFW model with stellar M*/L gradient'
+        model['lnprob'] = lnprob_spherical_gNFW_gradient
+        model['type'] = 'spherical_gNFW_gradient'
+        model['ndim'] = 7
+        model['JAMpars'] = ['cosinc', 'beta', 'ml', 'delta',
+                            'logrho_s', 'rs', 'gamma']
         # initialize the JAM class and pass to the global parameter
         model['JAM'] = \
             pyjam.axi_rms.jam(model['lum2d'], model['pot2d'],
