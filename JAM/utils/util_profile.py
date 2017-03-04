@@ -36,16 +36,6 @@ def _plotProfile(r, profiles, ax=None, **kwargs):
     ax.plot(r, profiles, **kwargs)
 
 
-def ml_gradient(sigma, delta, ml0=1.0):
-    '''
-    Create a M*L gradient
-    sigma: Gaussian sigma in Re
-    delta: Gradient value
-    ml0: Central stellar mass to light ratio
-    '''
-    return ml0 * (1 + delta * sigma).clip(0.1)
-
-
 class profile(modelRst):
     def __init__(self, name, path='.', burnin=0, nlines=200, r=None):
         super(profile, self).__init__(name, path=path, burnin=burnin,
@@ -101,7 +91,7 @@ class profile(modelRst):
                                        shape=self.shape, dist=self.dist)
                 mass[:, i], density[:, i] = _extractProfile(mge_pot, r)
             for i in range(ii.sum()):
-                ML = ml_gradient(sigma, delta[i], mls[i])
+                ML = util_mge.ml_gradient_gaussian(sigma, delta[i], ml0=mls[i])
                 stellarProfiles[:, i, 0] = np.sum(ML * density, axis=1)
                 stellarProfiles[:, i, 1] = np.sum(ML * mass, axis=1)
             self.profiles['stellar'] = stellarProfiles

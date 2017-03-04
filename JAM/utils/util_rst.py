@@ -96,16 +96,6 @@ def estimatePrameters(flatchain, method='median', flatlnprob=None):
         raise ValueError('Do not support {} method'.format(method))
 
 
-def ml_gradient(sigma, delta, ml0=1.0):
-    '''
-    Create a M*L gradient
-    sigma: Gaussian sigma in Re
-    delta: Gradient value
-    ml0: Central stellar mass to light ratio
-    '''
-    return ml0 * (1 + delta * sigma).clip(0.1)
-
-
 class modelRst(object):
     def __init__(self, name, path='.', burnin=0, best='median'):
         self.data = load(name, path=path)
@@ -235,7 +225,7 @@ class modelRst(object):
             ml = bestPars[2]
             delta = bestPars[3]
             sigma = self.pot2d[:, 1] / self.data['Re_arcsec']
-            ML = ml_gradient(sigma, delta, ml0=ml)
+            ML = util_mge.ml_gradient_gaussian(sigma, delta, ml0=ml)
             logrho_s = bestPars[4]
             rs = bestPars[5]
             gamma = bestPars[6]

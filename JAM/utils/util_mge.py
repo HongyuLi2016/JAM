@@ -81,6 +81,20 @@ def projection(mge3d, inc, shape='oblate'):
     return mge2d
 
 
+def ml_gradient_gaussian(sigma, delta, ml0=1.0, lower=0.4):
+    '''
+    Create a M*L gradient
+    sigma: Gaussian sigma in [Re]
+    delta: Gradient value
+    ml0: Central stellar mass to light ratio
+    lower: the ratio between the central and the outer most M*/L
+    '''
+    sigma = np.atleast_1d(sigma)
+    sigma = sigma - sigma[0]
+    ML = ml0 * (lower + (1-lower)*np.exp(-0.5 * (sigma * delta)**2))
+    return ML
+
+
 class mge:
     '''
     The default units are [L_solar/pc^2]  [pc]  [none]

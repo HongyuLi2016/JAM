@@ -21,7 +21,7 @@ from matplotlib import colors
 # parameter boundaries. [lower, upper]
 boundary = {'cosinc': [0.0, 1.0], 'beta': [0.0, 0.4], 'logrho_s': [3.0, 10.0],
             'rs': [5.0, 45.0], 'gamma': [-1.6, 0.0], 'ml': [0.5, 15],
-            'delta': [-0.3, 0.0]
+            'delta': [0.0, 2.0]
             }
 # parameter gaussian priors. [mean, sigma]
 prior = {'cosinc': [0.0, 1e4], 'beta': [0.0, 1e4], 'logrho_s': [5.0, 1e4],
@@ -124,16 +124,6 @@ def analyzeRst(sampler, nburnin=0):
 def dump():
     with open('{}/{}'.format(model['outfolder'], model['fname']), 'wb') as f:
         pickle.dump(model, f)
-
-
-def ml_gradient(sigma, delta, ml0=1.0):
-    '''
-    Create a M*L gradient
-    sigma: Gaussian sigma in Re
-    delta: Gradient value
-    ml0: Central stellar mass to light ratio
-    '''
-    return ml0 * (1 + delta * sigma).clip(0.1)
 
 
 def _sigmaClip(sampler, pos):
@@ -274,7 +264,7 @@ def lnprob_spherical_gNFW_gradient(pars, returnRms=False, returnChi2=False):
     inc = np.arccos(cosinc)
     Beta = np.zeros(model['lum2d'].shape[0]) + beta
     sigma = model['pot2d'][:, 1] / model['Re_arcsec']
-    ML = ml_gradient(sigma, delta, ml0=ml)
+    ML = util_mge.ml_gradient_gaussian(sigma, delta, ml0=ml)
     sgnfgJAM = model['JAM']
     dh = util_dm.gnfw1d(10**logrho_s, rs, gamma)
     dh_mge3d = dh.mge3d()
