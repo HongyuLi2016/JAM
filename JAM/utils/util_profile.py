@@ -257,18 +257,19 @@ class profile(modelRst):
             rtrue = true.get('r', None)
             if rtrue is None:
                 raise RuntimeError('r must be provided for true profile')
+            ii = (rtrue > Range[0]) * (rtrue < Range[1])
             if 'stellarDens' in true.keys():
-                axes[0].plot(np.log10(rtrue), true['stellarDens'], 'oy')
+                axes[0].plot(np.log10(rtrue[ii]), true['stellarDens'][ii], 'oy')
             if 'stellarMass' in true.keys():
-                axes[1].plot(np.log10(rtrue), true['stellarMass'], 'oy')
+                axes[1].plot(np.log10(rtrue[ii]), true['stellarMass'][ii], 'oy')
             if 'darkDens' in true.keys():
-                axes[0].plot(np.log10(rtrue), true['darkDens'], 'or')
+                axes[0].plot(np.log10(rtrue[ii]), true['darkDens'][ii], 'or')
             if 'darkMass' in true.keys():
-                axes[1].plot(np.log10(rtrue), true['darkMass'], 'or')
+                axes[1].plot(np.log10(rtrue[ii]), true['darkMass'][ii], 'or')
             if 'totalDens' in true.keys():
-                axes[0].plot(np.log10(rtrue), true['totalDens'], 'oc')
+                axes[0].plot(np.log10(rtrue[ii]), true['totalDens'][ii], 'oc')
             if 'totalMass' in true.keys():
-                axes[1].plot(np.log10(rtrue), true['totalMass'], 'oc')
+                axes[1].plot(np.log10(rtrue[ii]), true['totalMass'][ii], 'oc')
         for ax in axes:
             ax.set_xlim([np.min(logr), np.max(logr)])
             ax.axvline(np.log10(Re_kpc), ls="dashed", color='b', linewidth=2)
