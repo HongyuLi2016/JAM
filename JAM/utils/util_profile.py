@@ -268,7 +268,7 @@ class profile(modelRst):
             if 'totalDens' in true.keys():
                 axes[0].plot(np.log10(rtrue), true['totalDens'], 'oc')
             if 'totalMass' in true.keys():
-                axes[1].plot(np.log10(r), true['totalMass'], 'oc')
+                axes[1].plot(np.log10(rtrue), true['totalMass'], 'oc')
         for ax in axes:
             ax.set_xlim([np.min(logr), np.max(logr)])
             ax.axvline(np.log10(Re_kpc), ls="dashed", color='b', linewidth=2)
