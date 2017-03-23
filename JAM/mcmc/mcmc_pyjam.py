@@ -85,7 +85,10 @@ def analyzeRst(sampler, nburnin=0):
     rst = {}
     rst['chain'] = sampler.chain
     rst['lnprobability'] = sampler.lnprobability
-    rst['acor'] = sampler.acor
+    try:
+        rst['acor'] = sampler.acor
+    except:
+        rst['acor'] = np.nan
     print 'Mean autocorrelation time: {:.1f}'.format(np.mean(rst['acor']))
     rst['acceptance_fraction'] = sampler.acceptance_fraction
     rst['goodchains'] = ((rst['acceptance_fraction'] > 0.15) *
