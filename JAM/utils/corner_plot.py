@@ -46,7 +46,7 @@ def hist2d(x, y, *args, **kwargs):
 
     ax = kwargs.pop("ax", plt.gca())
     extent = kwargs.pop("extent", [[x.min(), x.max()], [y.min(), y.max()]])
-    bins = 30
+    bins = kwargs.pop("bins", 30)
     clevel = kwargs.pop("clevel", [0.2, 0.3, 0.683, 0.864, 0.997])
     color = kwargs.pop("color", [0.8936, 0.6382, 0.5106, 0.2553, 0.01276])
     linewidths = kwargs.pop("linewidths", 0.8)
@@ -83,10 +83,9 @@ def hist2d(x, y, *args, **kwargs):
 
 
 def corner(xs, weights=None, labels=None, extents=None, truths=None,
-           truth_color="r", scale_hist=False, quantiles=[], bins=100,
+           truth_color="r", scale_hist=False, quantiles=[], bins=30,
            verbose=False, fig=None, **kwargs):
     # hbins  bin number for 1D histgram
-    bins = kwargs.pop("bins", 100)
     clevel = kwargs.pop("clevel", [0.2, 0.3, 0.683, 0.864, 0.997])
     color = kwargs.pop("color", [0.8936, 0.6382, 0.5106, 0.1553, 0.01276])
     linewidths = kwargs.pop("linewidths", 0.8)
@@ -159,9 +158,8 @@ def corner(xs, weights=None, labels=None, extents=None, truths=None,
                 continue
             elif j == i:
                 continue
-            bins = kwargs.pop("bins", 100)
-            hist2d(y, x, ax=ax, extent=[extents[j], extents[i]],
-                   bins=bins, clevel=clevel, color=color, linewidths=linewidths,
+            hist2d(y, x, ax=ax, extent=[extents[j], extents[i]], bins=bins,
+                   clevel=clevel, color=color, linewidths=linewidths,
                    weights=weights, **kwargs)
 
             if truths is not None:

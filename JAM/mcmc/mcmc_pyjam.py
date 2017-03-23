@@ -21,12 +21,12 @@ from matplotlib import colors
 # parameter boundaries. [lower, upper]
 boundary = {'cosinc': [0.0, 1.0], 'beta': [0.0, 0.4], 'logrho_s': [3.0, 10.0],
             'rs': [5.0, 45.0], 'gamma': [-1.6, 0.0], 'ml': [0.5, 15],
-            'delta': [0.0, 2.0]
+            'logdelta': [-1.0, 1.0]
             }
 # parameter gaussian priors. [mean, sigma]
 prior = {'cosinc': [0.0, 1e4], 'beta': [0.0, 1e4], 'logrho_s': [5.0, 1e4],
          'rs': [10.0, 1e4], 'gamma': [-1.0, 1e4], 'ml': [1.0, 1e4],
-         'delta': [0.0, 1e4]}
+         'logdelta': [-1.0, 1e4]}
 
 model = {'boundary': boundary, 'prior': prior}
 
@@ -252,9 +252,9 @@ def lnprob_spherical_gNFW(pars, returnRms=False, returnChi2=False):
 
 
 def lnprob_spherical_gNFW_gradient(pars, returnRms=False, returnChi2=False):
-    cosinc, beta, ml, delta, logrho_s, rs, gamma = pars
+    cosinc, beta, ml, logdelta, logrho_s, rs, gamma = pars
     # print pars
-    parsDic = {'cosinc': cosinc, 'beta': beta, 'ml': ml, 'delta': delta,
+    parsDic = {'cosinc': cosinc, 'beta': beta, 'ml': ml, 'logdelta': logdelta,
                'logrho_s': logrho_s, 'rs': rs, 'gamma': gamma}
     if np.isinf(check_boundary(parsDic)):
         if returnChi2:
@@ -264,7 +264,7 @@ def lnprob_spherical_gNFW_gradient(pars, returnRms=False, returnChi2=False):
     inc = np.arccos(cosinc)
     Beta = np.zeros(model['lum2d'].shape[0]) + beta
     sigma = model['pot2d'][:, 1] / model['Re_arcsec']
-    ML = util_mge.ml_gradient_gaussian(sigma, delta, ml0=ml)
+    ML = util_mge.ml_gradient_gaussian(sigma, 10**logdelta, ml0=ml)
     sgnfgJAM = model['JAM']
     dh = util_dm.gnfw1d(10**logrho_s, rs, gamma)
     dh_mge3d = dh.mge3d()
@@ -396,7 +396,7 @@ class mcmc:
                                        (self.errDisp*self.disp)**2) /
                                np.sqrt(self.vel**2 + self.disp**2))
             else:
-                self.errRms = self.rms*0.0 + np.median(self.rms)
+                self.errRms = self.rms*0.0 + np.median(self.rms) * 0.1
         self.errRms *= self.errScale
         self.goodbins = galaxy.get('goodbins',
                                    np.ones_like(self.rms, dtype=bool))
@@ -604,7 +604,7 @@ class mcmc:
         model['lnprob'] = lnprob_spherical_gNFW_gradient
         model['type'] = 'spherical_gNFW_gradient'
         model['ndim'] = 7
-        model['JAMpars'] = ['cosinc', 'beta', 'ml', 'delta',
+        model['JAMpars'] = ['cosinc', 'beta', 'ml', 'logdelta',
                             'logrho_s', 'rs', 'gamma']
         # initialize the JAM class and pass to the global parameter
         model['JAM'] = \

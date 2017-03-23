@@ -82,7 +82,7 @@ class profile(modelRst):
             pot_ng = self.pot2d.copy()
             pot_tem = np.zeros([1, 3])
             sigma = pot_ng[:, 1]/self.data['Re_arcsec']
-            delta = self.flatchain[ii, 3].ravel()
+            logdelta = self.flatchain[ii, 3].ravel()
             mass = np.zeros([len(r), pot_ng.shape[0]])
             density = np.zeros([len(r), pot_ng.shape[0]])
             for i in range(pot_ng.shape[0]):
@@ -91,7 +91,8 @@ class profile(modelRst):
                                        shape=self.shape, dist=self.dist)
                 mass[:, i], density[:, i] = _extractProfile(mge_pot, r)
             for i in range(ii.sum()):
-                ML = util_mge.ml_gradient_gaussian(sigma, delta[i], ml0=mls[i])
+                ML = util_mge.ml_gradient_gaussian(sigma, 10**logdelta[i],
+                                                   ml0=mls[i])
                 stellarProfiles[:, i, 0] = np.sum(ML * density, axis=1)
                 stellarProfiles[:, i, 1] = np.sum(ML * mass, axis=1)
             self.profiles['stellar'] = stellarProfiles

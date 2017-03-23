@@ -223,12 +223,20 @@ class modelRst(object):
             inc = self.inc
             Beta = np.zeros(self.lum2d.shape[0]) + bestPars[1]
             ml = bestPars[2]
-            delta = bestPars[3]
+            logdelta = bestPars[3]
             sigma = self.pot2d[:, 1] / self.data['Re_arcsec']
-            ML = util_mge.ml_gradient_gaussian(sigma, delta, ml0=ml)
+            ML = util_mge.ml_gradient_gaussian(sigma, 10**logdelta, ml0=ml)
             logrho_s = bestPars[4]
             rs = bestPars[5]
             gamma = bestPars[6]
+            # inc = np.arccos(0.078)
+            # Beta = 0.144 + np.zeros(self.lum2d.shape[0])
+            # ml = 3.962
+            # logdelta = -1.0
+            # ML = util_mge.ml_gradient_gaussian(sigma, 10**logdelta, ml0=ml)
+            # logrho_s = 6.593
+            # rs = 31.299
+            # gamma = -1.108
             dh = util_dm.gnfw1d(10**logrho_s, rs, gamma)
             dh_mge3d = dh.mge3d()
             self.rmsModel = JAMmodel.run(inc, Beta, ml=ML, mge_dh=dh_mge3d)
