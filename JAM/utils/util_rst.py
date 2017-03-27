@@ -242,7 +242,8 @@ class modelRst(object):
             self.rmsModel = JAMmodel.run(inc, Beta, ml=ML, mge_dh=dh_mge3d)
             self.flux = JAMmodel.flux
             self.labels = [r'$\mathbf{cosi}$', r'$\mathbf{\beta}$',
-                           r'$\mathbf{M^*/L}$', r'$\mathbf{\Delta_{IMF}}$',
+                           r'$\mathbf{M^*/L}$',
+                           r'$\mathbf{\log \Delta_{IMF}}$',
                            r'$\mathbf{log\ \rho_s}$',
                            r'$\mathbf{r_s}$', r'$\mathbf{\gamma}$']
             # create dark halo mass mge object

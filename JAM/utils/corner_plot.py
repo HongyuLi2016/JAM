@@ -119,7 +119,7 @@ def corner(xs, weights=None, labels=None, extents=None, truths=None,
                           range=extents[i], color="w",
                           facecolor='b', histtype="stepfilled")
         if truths is not None:
-            ax.axvline(truths[i], color=truth_color, linewidth=2.5, alpha=0.5)
+            ax.axvline(truths[i], color=truth_color, linewidth=5.0, alpha=0.9)
 
         # Plot quantiles if wanted.
         if len(quantiles) > 0:
@@ -163,11 +163,12 @@ def corner(xs, weights=None, labels=None, extents=None, truths=None,
                    weights=weights, **kwargs)
 
             if truths is not None:
-                ax.plot(truths[j], truths[i], ".", color=truth_color)
+                ax.plot(truths[j], truths[i], "o", color=truth_color,
+                        markersize=10.0)
                 ax.axvline(truths[j], color=truth_color,
-                           linewidth=1.5, alpha=0.5)
+                           linewidth=2.0, alpha=0.9)
                 ax.axhline(truths[i], color=truth_color,
-                           linewidth=1.5, alpha=0.5)
+                           linewidth=2.0, alpha=0.9)
 
             ax.xaxis.set_major_locator(MaxNLocator(4))
             ax.yaxis.set_major_locator(MaxNLocator(4))
