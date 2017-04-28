@@ -351,7 +351,7 @@ class modelRst(object):
                               markersize=markersize)
         else:
             raise ValueError('vmap {} not supported'.format(vmap))
-        fig.savefig('{}/{}'.format(outpath, figname), dpi=300)
+        fig.savefig('{}/{}'.format(outpath, figname), dpi=100)
 
     def plotChain(self, figname='chain.png', outpath='.', **kwargs):
         figsize = (8.0, self.ndim*2.0)
@@ -360,7 +360,7 @@ class modelRst(object):
             axes[i].plot(self.chain[:, :, i].T, color='k', alpha=0.2)
             axes[i].set_ylabel(self.labels[i])
         axes[-1].set_xlabel('nstep')
-        fig.savefig('{}/{}'.format(outpath, figname), dpi=200)
+        fig.savefig('{}/{}'.format(outpath, figname), dpi=100)
 
     def plotVrms(self, figname='rmsProfile.png', outpath='.', width=1.0,
                  **kwargs):
@@ -371,7 +371,7 @@ class modelRst(object):
                  ax=ax[1], angle=90.0, width=width, ylabel=None,
                  xlabel='y arcsec')
         plt.tight_layout()
-        fig.savefig('{}/{}'.format(outpath, figname), dpi=300)
+        fig.savefig('{}/{}'.format(outpath, figname), dpi=100)
 
     def dump(self, outpath, name='rst.dat'):
         data = {}

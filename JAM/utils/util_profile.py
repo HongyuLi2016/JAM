@@ -295,4 +295,4 @@ class profile(modelRst):
                          transform=axes[1].transAxes, fontproperties=text_font)
             axes[1].text(0.85, 0.25, 'Stellar', color='y',
                          transform=axes[1].transAxes, fontproperties=text_font)
-        fig.savefig('{}/{}'.format(outpath, figname), dpi=300)
+        fig.savefig('{}/{}'.format(outpath, figname), dpi=100)
