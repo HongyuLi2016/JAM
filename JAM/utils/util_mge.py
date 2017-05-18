@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.integrate import quad, dblquad
 from scipy.misc import derivative
+from scipy import special
 
 TWO_PI = 2.0 * np.pi
 FOUR_PI = 4.0 * np.pi
@@ -38,11 +39,15 @@ def _Hu_inte(u,
     return rst
 
 
-def Re(mge2d, lower=0.5, upper=30.0):
+def _Re(mge2d, lower=None, upper=None):
     '''
     calculate the effective radius using Cappellari 2013 MNRAS 432,1709
       Equation (11)
     '''
+    if lower is None:
+        lower = 0.3 * mge2d[:, 1].min()
+    if upper is None:
+        upper = 3.0 * mge2d[:, 1].max()
     L = 2*np.pi * mge2d[:, 0] * mge2d[:, 1]**2 * mge2d[:, 2]
     R = np.logspace(np.log10(lower), np.log10(upper), 5000)
     enclosedL = R.copy()
@@ -53,6 +58,28 @@ def Re(mge2d, lower=0.5, upper=30.0):
     halfL = np.sum(L) / 2.0
     ii = np.abs(enclosedL-halfL) == np.min(np.abs(enclosedL-halfL))
     return np.mean(R[ii])
+
+
+def _r_half(mge2d, lower=None, upper=None):
+    '''
+    calculate the 3D half light radius using Cappellari 2013 MNRAS 432,1709
+      Equation (15)
+    '''
+    if lower is None:
+        lower = 0.3 * mge2d[:, 1].min()
+    if upper is None:
+        upper = 3.0 * mge2d[:, 1].max()
+    L = 2*np.pi * mge2d[:, 0] * mge2d[:, 1]**2 * mge2d[:, 2]
+    r = np.logspace(np.log10(lower), np.log10(upper), 5000)
+    enclosedL = r.copy()
+    scale = (2**0.5 * mge2d[:, 1] * mge2d[:, 2]**(1.0/3.0))
+    for i in range(r.size):
+        h = r[i] / scale
+        enclosedL[i] = \
+            np.sum(L * (special.erf(h) - 2.0*h*np.exp(-h**2)/np.pi**0.5))
+    halfL = np.sum(L) / 2.0
+    ii = np.abs(enclosedL-halfL) == np.min(np.abs(enclosedL-halfL))
+    return np.mean(r[ii])
 
 
 def projection(mge3d, inc, shape='oblate'):
@@ -234,3 +261,9 @@ class mge:
         '''
         Force = derivative(self.Phi, R, args=([0]))
         return np.sqrt(ml*Force*R)
+
+    def Re(self):
+        return _Re(self.mge2d)
+
+    def r_half(self):
+        return _r_half(self.mge2d)

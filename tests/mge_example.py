@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 import numpy as np
-import util_dm as udm  # import dark matter utility class
-import util_mge as umge  # import mge utility class
+from contex import JAM
+import JAM.utils.util_dm as udm  # import dark matter utility class
+import JAM.utils.util_mge as umge  # import mge utility class
 import matplotlib.pyplot as plt
 
 r = np.logspace(np.log10(0.1), np.log10(100), 500)
@@ -19,9 +20,9 @@ profile = np.log10(gnfw_dh.densityProfile(r))  # get the density profile
 mge2d = gnfw_dh.mge2d()  # fit the density profile using MGE
 
 mge = umge.mge(mge2d, np.pi/2.0, shape='oblate')  # initialize the MGE class using the MGE from dark halo
-print '--------------------'
-print 'Enclosed Mass within 10kpc (fNFW profile): {:.3e}'.format(gnfw_dh.enclosedMass(10.0))
-print 'Enclosed Mass within 10kpc (MGE approximation): {:.3e}'.format(mge.enclosed3Dluminosity(10.0))
+print('--------------------')
+print('Enclosed Mass within 10kpc (fNFW profile): {:.3e}'.format(gnfw_dh.enclosedMass(10.0)))
+print('Enclosed Mass within 10kpc (MGE approximation): {:.3e}'.format(mge.enclosed3Dluminosity(10.0*1e3)))
 profile_mge = np.log10(mge.luminosityDensity(r*1e3, 0)*1e9)  # here are some unit conversion
 # plot the density profile of the dark halo and the mge approximation
 line_dh, = plt.plot(logr, profile, 'k')
