@@ -1,6 +1,7 @@
 import matplotlib as mpl
 from matplotlib import colors, colorbar
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 import os
 JAMPATH = os.environ.get('JAMPATH')
 if JAMPATH is None:
@@ -61,7 +62,8 @@ label_font =\
 
 
 def set_labels(ax, x=True, y=True, xrotate=False,
-               yrotate=False, font=ticks_font):
+               yrotate=False, font=ticks_font, xmax=None,
+               ymax=None):
     for l in ax.get_xticklabels():
         if xrotate:
             l.set_rotation(xrotate)
@@ -70,6 +72,10 @@ def set_labels(ax, x=True, y=True, xrotate=False,
         if yrotate:
             l.set_rotation(yrotate)
         l.set_fontproperties(font)
+    if xmax is not None:
+        ax.xaxis.set_major_locator(MaxNLocator(xmax))
+    if ymax is not None:
+        ax.yaxis.set_major_locator(MaxNLocator(ymax))
 
 
 def equal_limits1(ax, lim=None):
@@ -104,7 +110,7 @@ def equal_limits(ax, lim=None, xreverse=True):
 
 
 def add_colorbar(ax, cmap, norm, width=0.02, position='right',
-                 barlabel='', fig=None, **kwargs):
+                 barlabel='', fig=None, cmax=None, **kwargs):
     if fig is None:
         fig = plt.gcf()
 
@@ -113,20 +119,26 @@ def add_colorbar(ax, cmap, norm, width=0.02, position='right',
         axc = fig.add_axes([pos.x1, pos.y0, width, pos.height])
         colorbar.ColorbarBase(axc, orientation='vertical',
                               norm=norm, cmap=cmap)
-        # axc.yaxis.set_major_locator(MaxNLocator(5))
+        if cmax is not None:
+            axc.yaxis.set_major_locator(MaxNLocator(cmax))
     elif position == 'left':
         axc = fig.add_axes([pos.x0-width, pos.y0, width, pos.height])
         colorbar.ColorbarBase(axc, orientation='vertical',
                               norm=norm, cmap=cmap)
-        # axc.yaxis.set_major_locator(MaxNLocator(5))
+        if cmax is not None:
+            axc.yaxis.set_major_locator(MaxNLocator(cmax))
     elif position == 'top':
         axc = fig.add_axes([pos.x0, pos.y1, pos.width, width])
         colorbar.ColorbarBase(axc, orientation='horizontal',
                               norm=norm, cmap=cmap)
+        if cmax is not None:
+            axc.xaxis.set_major_locator(MaxNLocator(cmax))
     elif position == 'bottom':
         axc = fig.add_axes([pos.x0, pos.y0-width, pos.width, width])
         colorbar.ColorbarBase(axc, orientation='horizontal',
                               norm=norm, cmap=cmap)
+        if cmax is not None:
+            axc.xaxis.set_major_locator(MaxNLocator(cmax))
     set_labels(axc, font=ticks_font1)
     barlabelSize = kwargs.get('barlabelSize', 'x-small')
     axc.set_ylabel(barlabel, fontsize=barlabelSize)
