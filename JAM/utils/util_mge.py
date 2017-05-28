@@ -60,7 +60,16 @@ def _Re(mge2d, lower=None, upper=None):
     return np.mean(R[ii])
 
 
-def _r_half(mge2d, lower=None, upper=None):
+def _enclosed3D(mge3d, r):
+    lum = mge3d[:, 0] * (np.sqrt(2.*np.pi)*mge3d[:, 1])**3 * mge3d[:, 2]
+    e = np.sqrt(1. - mge3d[:, 2]**2)
+    h = r[:, np.newaxis]/(np.sqrt(2.)*mge3d[:, 1]*mge3d[:, 2])
+    mass_r = np.sum(lum*(special.erf(h) - np.exp(-(h*mge3d[:, 2])**2) *
+                         special.erf(h*e)/e), axis=1)
+    return mass_r
+
+
+def _r_half_cir(mge2d, lower=None, upper=None):
     '''
     calculate the 3D half light radius using Cappellari 2013 MNRAS 432,1709
       Equation (15)
@@ -186,7 +195,7 @@ class mge:
                                         (R**2 + (z/mge3d[i, 2])**2))
         return rst
 
-    def meanDensity(self, r):
+    def meanDensity_inte(self, r):
         '''
         Return the mean density at give spherical radius r
         r in pc, density in L_solar/pc^3
@@ -198,6 +207,9 @@ class mge:
         density = self.luminosityDensity(R, z)
         return np.average(density)
 
+    def meanDensity_anly(self, r):
+        return
+
     def surfaceBrightness(self, x, y):
         '''
         Return the surface brightness at coordinate x, y (in L_solar/pc^2)
@@ -207,15 +219,17 @@ class mge:
         rst = 0.0
         if self.shape == 'prolate':
             for i in range(self.ngauss):
-                rst += self.mge2d[i, 0] * np.exp(-0.5/self.mge2d[i, 1]**2 *
-                                                 (y**2+(x/self.mge2d[i, 2])**2))
+                rst += self.mge2d[i, 0] * \
+                    np.exp(-0.5/self.mge2d[i, 1]**2 *
+                           (y**2+(x/self.mge2d[i, 2])**2))
         elif self.shape == 'oblate':
             for i in range(self.ngauss):
-                rst += self.mge2d[i, 0] * np.exp(-0.5/self.mge2d[i, 1]**2 *
-                                                 (x**2+(y/self.mge2d[i, 2])**2))
+                rst += self.mge2d[i, 0] * \
+                    np.exp(-0.5/self.mge2d[i, 1]**2 *
+                           (x**2+(y/self.mge2d[i, 2])**2))
         return rst
 
-    def enclosed3Dluminosity(self, r):
+    def enclosed3Dluminosity_inte(self, r):
         '''
         Return the 3D enclosed luminosity within a sphere r (in L_solar)
         input r should be in pc
@@ -227,6 +241,16 @@ class mge:
         I = dblquad(_inte_3dencloseM, 0.0, 1.0, lambda x: 0.0,
                     lambda x: r, args=(dens, twoSigma2, q2))
         return I[0]
+
+    def enclosed3Dluminosity(self, r):
+        '''
+        Return the 3D enclosed luminosity within a sphere r (in L_solar)
+        input r should be in pc
+        '''
+        r = np.atleast_1d(r)
+        mge3d = self.deprojection()
+        mass_r = _enclosed3D(mge3d, r)
+        return mass_r
 
     def enclosed2Dluminosity(self, R):
         '''
@@ -265,5 +289,5 @@ class mge:
     def Re(self):
         return _Re(self.mge2d)
 
-    def r_half(self):
-        return _r_half(self.mge2d)
+    def r_half_cir(self):
+        return _r_half_cir(self.mge2d)

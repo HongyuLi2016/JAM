@@ -19,15 +19,19 @@ profile = np.log10(gnfw_dh.densityProfile(r))  # get the density profile
 
 mge2d = gnfw_dh.mge2d()  # fit the density profile using MGE
 
-mge = umge.mge(mge2d, np.pi/2.0, shape='oblate')  # initialize the MGE class using the MGE from dark halo
+# initialize the MGE class using the MGE from dark halo
+mge = umge.mge(mge2d, np.pi/2.0, shape='oblate')
 print('--------------------')
-print('Enclosed Mass within 10kpc (fNFW profile): {:.3e}'.format(gnfw_dh.enclosedMass(10.0)))
-print('Enclosed Mass within 10kpc (MGE approximation): {:.3e}'.format(mge.enclosed3Dluminosity(10.0*1e3)))
-profile_mge = np.log10(mge.luminosityDensity(r*1e3, 0)*1e9)  # here are some unit conversion
+print('Enclosed Mass within 10kpc (gNFW profile): {:.3e}'
+      .format(gnfw_dh.enclosedMass(10.0)))
+print('Enclosed Mass within 10kpc (MGE approximation): {:.3e}'
+      .format(mge.enclosed3Dluminosity(10.0*1e3)[0]))
+# here are some unit conversion
+profile_mge = np.log10(mge.luminosityDensity(r*1e3, 0)*1e9)
 # plot the density profile of the dark halo and the mge approximation
 line_dh, = plt.plot(logr, profile, 'k')
 line_mge, = plt.plot(logr, profile_mge, 'r')
 plt.xlabel('logR [kpc]')
 plt.ylabel('logrho [M_solar/kpc^3]')
 plt.legend([line_dh, line_mge], ['gNFW halo', 'MGE approximation'])
-plt.show()
+plt.savefig('profile.png')
