@@ -91,6 +91,22 @@ def _r_half_cir(mge2d, lower=None, upper=None):
     return np.mean(r[ii])
 
 
+def _r_half(mge3d, lower=None, upper=None):
+    '''
+    calculate the 3D half light radius using Cappellari 2013 MNRAS 432,1709
+      Equation (15)
+    '''
+    if lower is None:
+        lower = 0.3 * mge3d[:, 1].min()
+    if upper is None:
+        upper = 3.0 * mge3d[:, 1].max()
+    halfL = np.sum(mge3d[:, 0] * (SQRT_TOW_PI*mge3d[:, 1])**3 * mge3d[:, 2])/2
+    r = np.logspace(np.log10(lower), np.log10(upper), 5000)
+    enclosedL = _enclosed3D(mge3d, r)
+    ii = np.abs(enclosedL-halfL) == np.min(np.abs(enclosedL-halfL))
+    return np.mean(r[ii])
+
+
 def projection(mge3d, inc, shape='oblate'):
     '''
     Convert 3d mges to 2d mges
@@ -213,6 +229,7 @@ class mge:
         '''
         Return the mean density at give spherical radius r
         r in pc, density in L_solar/pc^3
+        See Cappellari 2015, APJ 804,21
         '''
         r = np.atleast_1d(r)[:, np.newaxis]
         mge2d = self.mge2d
@@ -262,6 +279,7 @@ class mge:
         '''
         Return the 3D enclosed luminosity within a sphere r (in L_solar)
         input r should be in pc
+        see Mitzkus 2017, MNRAS 464,4789
         '''
         r = np.atleast_1d(r)
         mge3d = self.deprojection()
@@ -309,4 +327,4 @@ class mge:
         return _r_half_cir(self.mge2d)
 
     def r_half(self):
-        return
+        return _r_half(self.deprojection())
