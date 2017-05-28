@@ -61,7 +61,7 @@ def _Re(mge2d, lower=None, upper=None):
 
 
 def _enclosed3D(mge3d, r):
-    lum = mge3d[:, 0] * (np.sqrt(2.*np.pi)*mge3d[:, 1])**3 * mge3d[:, 2]
+    lum = mge3d[:, 0] * (SQRT_TOW_PI*mge3d[:, 1])**3 * mge3d[:, 2]
     e = np.sqrt(1. - mge3d[:, 2]**2)
     h = r[:, np.newaxis]/(np.sqrt(2.)*mge3d[:, 1]*mge3d[:, 2])
     mass_r = np.sum(lum*(special.erf(h) - np.exp(-(h*mge3d[:, 2])**2) *
@@ -199,16 +199,31 @@ class mge:
         '''
         Return the mean density at give spherical radius r
         r in pc, density in L_solar/pc^3
+        meanDensity is recommended to ues
         '''
+        r = np.atleast_1d(r)[:, np.newaxis]
         cosTheta = np.linspace(0.0, 1.0, 500)
         sinTheta = np.sqrt(1 - cosTheta**2)
         R = r * sinTheta
         z = r * cosTheta
         density = self.luminosityDensity(R, z)
-        return np.average(density)
+        return np.average(density, axis=1)
 
-    def meanDensity_anly(self, r):
-        return
+    def meanDensity(self, r):
+        '''
+        Return the mean density at give spherical radius r
+        r in pc, density in L_solar/pc^3
+        '''
+        r = np.atleast_1d(r)[:, np.newaxis]
+        mge2d = self.mge2d
+        mge3d = self.deprojection()
+        sigma = mge3d[:, 1]
+        q = mge3d[:, 2]
+        lum = mge2d[:, 0]*TWO_PI*sigma**2 * q
+        rho = np.sum(lum * np.exp(-r**2/(2*sigma**2)) *
+                     special.erf(r*np.sqrt(1-q**2)/(q*sigma*np.sqrt(2.0))) /
+                     (FOUR_PI*sigma**2*r*np.sqrt(1-q**2)), axis=1)
+        return rho
 
     def surfaceBrightness(self, x, y):
         '''
@@ -233,6 +248,7 @@ class mge:
         '''
         Return the 3D enclosed luminosity within a sphere r (in L_solar)
         input r should be in pc
+        enclosed3Dluminosity is recommended to use
         '''
         mge3d = self.deprojection()
         dens = mge3d[:, 0]
@@ -291,3 +307,6 @@ class mge:
 
     def r_half_cir(self):
         return _r_half_cir(self.mge2d)
+
+    def r_half(self):
+        return
