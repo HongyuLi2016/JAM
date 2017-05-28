@@ -22,11 +22,8 @@ def _extractProfile(mge, r):
     mge is the mge object, defined in util_mge.py
     r is the radius in kpc, 1d array
     '''
-    mass = np.zeros_like(r)
-    density = np.zeros_like(r)
-    for i in range(len(r)):
-        mass[i] = mge.enclosed3Dluminosity(r[i]*1e3)
-        density[i] = mge.meanDensity(r[i]*1e3) * 1e9
+    mass = mge.enclosed3Dluminosity(r*1e3)
+    density = mge.meanDensity(r*1e3) * 1e9
     return mass, density
 
 
@@ -168,7 +165,7 @@ class profile(modelRst):
                 mass[i] = self.DmMge.enclosed2Dluminosity(R[i])
             return mass
         else:
-            print 'No dark matter halo in current model'
+            print('No dark matter halo in current model')
             return None
 
     def enclosed3DdarkMass(self, r):
@@ -182,7 +179,7 @@ class profile(modelRst):
                 mass[i] = self.DmMge.enclosed3Dluminosity(r[i])
             return mass
         else:
-            print 'No dark matter halo in current model'
+            print('No dark matter halo in current model')
             return None
 
     def enclosed2DTotalMass(self, R):
