@@ -23,13 +23,21 @@ git clone https://github.com/HongyuLi2016/JAM
 Be careful, before use the plot routines in JAM/utils folder, please set the JAMPATH enviroment variable.
 This ensure JAM could find the fond path correctly.
 
-The enviroment variable can be set by add the following comment into ~/.bashrc or ~/.bash_profile
+The environment variable can be set by add the following comment into ~/.bashrc or ~/.bash_profile
 ```
 export JAMPATH=YourInstallPath
 ```
-YourInstallPath is the path where you put the JAM package (i.e. you can find pyjam, cpyjam, utils etc.).
+YourInstallPath is the path which contains folder pyjam, mcmc and utils. 
 
+E.g. if you use the following commands,
+```
+cd ~
 
+git clone https://github.com/HongyuLi2016/JAM
+```
+your JAMPATH should be ~/JAM/
+
+The mge1d package for 1-dimensional MGE fitting is required if you use mcmc model. See the mge1d packge for the instruction of how to install and set the environment variable correctly.
 
 Contents
 --------
