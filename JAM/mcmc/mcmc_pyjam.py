@@ -368,7 +368,7 @@ class mcmc:
         initialize model parameters and data
         '''
         self.lum2d = galaxy['lum2d']
-        self.Re_arcsec = util_mge.Re(self.lum2d)
+        self.Re_arcsec = util_mge._Re(self.lum2d)
         self.pot2d = galaxy.get('pot2d', self.lum2d.copy())
         self.distance = galaxy.get('distance', None)
         self.redshift = galaxy.get('redshift', None)
