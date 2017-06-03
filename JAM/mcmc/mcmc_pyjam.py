@@ -16,7 +16,7 @@ import pickle
 import matplotlib.pyplot as plt
 from matplotlib import colors
 # from emcee.utils import MPIPool
-# import sys
+import sys
 
 # parameter boundaries. [lower, upper]
 boundary = {'cosinc': [0.0, 1.0], 'beta': [0.0, 0.4], 'logrho_s': [3.0, 10.0],
@@ -170,6 +170,8 @@ def _sigmaClip(sampler, pos):
             print ('clip too many pixels: goodbin fraction < {:.2f}'
                    .format(model['minFraction']))
             break
+        sys.stdout.flush()
+    sys.stdout.flush()
     return sampler, pos
 
 
@@ -181,6 +183,7 @@ def _runEmcee(sampler, p0):
     pos, prob, state = sampler.run_mcmc(p0, burninStep)
     print 'Start running'
     print 'Time for burnin: {:.2f}s'.format(time()-startTime)
+    sys.stdout.flush()
     flatchain = sampler.flatchain
     flatlnprob = sampler.flatlnprobability
     pars = estimatePrameters(flatchain, method='max', flatlnprob=flatlnprob)
@@ -535,9 +538,8 @@ class mcmc:
         if model['p0'] == 'flat':
             p0 = flat_initp(JAMpars, nwalkers)
         elif model['p0'] == 'fit':
-            print ('Calculate maximum lnprob positon from optimisiztion - not'
-                   'implemented yet')
-            exit(0)
+            raise ValueError('Calculate maximum lnprob positon from '
+                             'optimisiztion - not implemented yet')
         else:
             raise ValueError('p0 must be flat or fit, {} is '
                              'not supported'.format(model['p0']))
@@ -549,12 +551,14 @@ class mcmc:
         initSampler = \
             emcee.EnsembleSampler(nwalkers, ndim, model['lnprob'],
                                   threads=threads)
+        sys.stdout.flush()
         sampler = _runEmcee(initSampler, p0)
         # pool.close()
         print '--------------------------------------------------'
         print ('Finish! Total elapsed time: {:.2f}s'
                .format(time()-self.startTime))
         rst = analyzeRst(sampler)
+        sys.stdout.flush()
         model['rst'] = rst
         dump()
 
@@ -583,21 +587,22 @@ class mcmc:
         if model['p0'] == 'flat':
             p0 = flat_initp(JAMpars, nwalkers)
         elif model['p0'] == 'fit':
-            print ('Calculate maximum lnprob positon from optimisiztion - not'
-                   'implemented yet')
-            exit(0)
+            raise ValueError('Calculate maximum lnprob positon from '
+                             'optimisiztion - not implemented yet')
         else:
             raise ValueError('p0 must be flat or fit, {} is '
                              'not supported'.format(model['p0']))
         initSampler = \
             emcee.EnsembleSampler(nwalkers, ndim, model['lnprob'],
                                   threads=threads)
+        sys.stdout.flush()
         sampler = _runEmcee(initSampler, p0)
         # pool.close()
         print '--------------------------------------------------'
         print ('Finish! Total elapsed time: {:.2f}s'
                .format(time()-self.startTime))
         rst = analyzeRst(sampler)
+        sys.stdout.flush()
         model['rst'] = rst
         dump()
 
@@ -627,21 +632,22 @@ class mcmc:
         if model['p0'] == 'flat':
             p0 = flat_initp(JAMpars, nwalkers)
         elif model['p0'] == 'fit':
-            print ('Calculate maximum lnprob positon from optimisiztion - not'
-                   'implemented yet')
-            exit(0)
+            raise ValueError('Calculate maximum lnprob positon from '
+                             'optimisiztion - not implemented yet')
         else:
             raise ValueError('p0 must be flat or fit, {} is '
                              'not supported'.format(model['p0']))
         initSampler = \
             emcee.EnsembleSampler(nwalkers, ndim, model['lnprob'],
                                   threads=threads)
+        sys.stdout.flush()
         sampler = _runEmcee(initSampler, p0)
         # pool.close()
         print '--------------------------------------------------'
         print ('Finish! Total elapsed time: {:.2f}s'
                .format(time()-self.startTime))
         rst = analyzeRst(sampler)
+        sys.stdout.flush()
         model['rst'] = rst
         dump()
 
@@ -676,21 +682,22 @@ class mcmc:
         if model['p0'] == 'flat':
             p0 = flat_initp(JAMpars, nwalkers)
         elif model['p0'] == 'fit':
-            print ('Calculate maximum lnprob positon from optimisiztion - not'
-                   'implemented yet')
-            exit(0)
+            raise ValueError('Calculate maximum lnprob positon from '
+                             'optimisiztion - not implemented yet')
         else:
             raise ValueError('p0 must be flat or fit, {} is '
                              'not supported'.format(model['p0']))
         initSampler = \
             emcee.EnsembleSampler(nwalkers, ndim, model['lnprob'],
                                   threads=threads)
+        sys.stdout.flush()
         sampler = _runEmcee(initSampler, p0)
         # pool.close()
         print '--------------------------------------------------'
         print ('Finish! Total elapsed time: {:.2f}s'
                .format(time()-self.startTime))
         rst = analyzeRst(sampler)
+        sys.stdout.flush()
         model['rst'] = rst
         dump()
 
