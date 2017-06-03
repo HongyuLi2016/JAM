@@ -183,6 +183,7 @@ def _runEmcee(sampler, p0):
     pos, prob, state = sampler.run_mcmc(p0, burninStep)
     print 'Start running'
     print 'Time for burnin: {:.2f}s'.format(time()-startTime)
+    sys.stdout.flush()
     flatchain = sampler.flatchain
     flatlnprob = sampler.flatlnprobability
     pars = estimatePrameters(flatchain, method='max', flatlnprob=flatlnprob)
