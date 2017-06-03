@@ -143,8 +143,8 @@ def _sigmaClip(sampler, pos):
         pars = estimatePrameters(flatchain, method='max',
                                  flatlnprob=flatlnprob)
         N += 1
-        rmsModel = lnprob(pars, returnRms=True)
-        chi2 = lnprob(pars, returnChi2=True)
+        rmsModel = lnprob(pars, model=model, returnType='rmsModel')
+        chi2 = lnprob(pars, model=model, returnType='chi2')
         inThreeSigma = (abs(rmsModel - model['rms']) < model['errRms'] *
                         model['clipSigma'])
         model['goodbins'] *= inThreeSigma
@@ -203,154 +203,189 @@ def _runEmcee(sampler, p0):
     return sampler
 
 
-def lnprob_massFollowLight(pars, returnRms=False, returnChi2=False,
-                           model=None):
+def lnprob_massFollowLight(pars, returnType='lnprob', model=None):
     cosinc, beta, ml = pars
     # print pars
     parsDic = {'cosinc': cosinc, 'beta': beta, 'ml': ml}
+    rst = {}
     if np.isinf(check_boundary(parsDic)):
-        if returnChi2:
-            return np.inf
-        return -np.inf
+        rst['lnprob'] = -np.inf
+        rst['chi2'] = np.inf
+        rst['flux'] = None
+        rst['rmsModel'] = None
+        return rst[returnType]
     lnpriorValue = lnprior(parsDic)
     inc = np.arccos(cosinc)
     Beta = np.zeros(model['lum2d'].shape[0]) + beta
-    mflJAM = model['JAM']
-    rmsModel = mflJAM.run(inc, Beta, ml=ml)
-    if returnRms:
-        return rmsModel
+    JAM = model['JAM']
+    rmsModel = JAM.run(inc, Beta, ml=ml)
     chi2 = (((rmsModel[model['goodbins']] - model['rms'][model['goodbins']]) /
              model['errRms'][model['goodbins']])**2).sum()
-    if returnChi2:
-        return chi2
     if np.isnan(chi2):
         print('Warning - JAM return nan value, beta={:.2f} may not'
               ' be correct'.format(beta))
-        return -np.inf
-    return -0.5*chi2 + lnpriorValue
+        rst['lnprob'] = -np.inf
+        rst['chi2'] = np.inf
+        rst['flux'] = None
+        rst['rmsModel'] = None
+        return rst[returnType]
+
+    rst['lnprob'] = -0.5*chi2 + lnpriorValue
+    rst['chi2'] = chi2
+    rst['flux'] = JAM.flux
+    rst['rmsModel'] = rmsModel
+    return rst[returnType]
 
 
-def lnprob_spherical_gNFW(pars, returnRms=False, returnChi2=False,
-                          model=None):
+def lnprob_spherical_gNFW(pars, returnType='lnprob', model=None):
     cosinc, beta, ml, logrho_s, rs, gamma = pars
     # print pars
     parsDic = {'cosinc': cosinc, 'beta': beta, 'ml': ml,
                'logrho_s': logrho_s, 'rs': rs, 'gamma': gamma}
+    rst = {}
     if np.isinf(check_boundary(parsDic)):
-        if returnChi2:
-            return np.inf
-        return -np.inf
+        rst['lnprob'] = -np.inf
+        rst['chi2'] = np.inf
+        rst['flux'] = None
+        rst['rmsModel'] = None
+        return rst[returnType]
     lnpriorValue = lnprior(parsDic)
     inc = np.arccos(cosinc)
     Beta = np.zeros(model['lum2d'].shape[0]) + beta
-    sgnfJAM = model['JAM']
+    JAM = model['JAM']
     dh = util_dm.gnfw1d(10**logrho_s, rs, gamma)
     dh_mge3d = dh.mge3d()
-    rmsModel = sgnfJAM.run(inc, Beta, ml=ml, mge_dh=dh_mge3d)
-    if returnRms:
-        return rmsModel
+    rmsModel = JAM.run(inc, Beta, ml=ml, mge_dh=dh_mge3d)
     chi2 = (((rmsModel[model['goodbins']] - model['rms'][model['goodbins']]) /
              model['errRms'][model['goodbins']])**2).sum()
-    if returnChi2:
-        return chi2
     if np.isnan(chi2):
         print('Warning - JAM return nan value, beta={:.2f} may not'
               ' be correct'.format(beta))
-        return -np.inf
-    return -0.5*chi2 + lnpriorValue
+        rst['lnprob'] = -np.inf
+        rst['chi2'] = np.inf
+        rst['flux'] = None
+        rst['rmsModel'] = None
+        return rst[returnType]
+
+    rst['lnprob'] = -0.5*chi2 + lnpriorValue
+    rst['chi2'] = chi2
+    rst['flux'] = JAM.flux
+    rst['rmsModel'] = rmsModel
+    return rst[returnType]
 
 
-def lnprob_spherical_gNFW_gradient(pars, returnRms=False, returnChi2=False,
-                                   model=None):
+def lnprob_spherical_gNFW_gradient(pars, returnType='lnprob', model=None):
     cosinc, beta, ml, logdelta, logrho_s, rs, gamma = pars
     # print pars
     parsDic = {'cosinc': cosinc, 'beta': beta, 'ml': ml, 'logdelta': logdelta,
                'logrho_s': logrho_s, 'rs': rs, 'gamma': gamma}
+    rst = {}
     if np.isinf(check_boundary(parsDic)):
-        if returnChi2:
-            return np.inf
-        return -np.inf
+        rst['lnprob'] = -np.inf
+        rst['chi2'] = np.inf
+        rst['flux'] = None
+        rst['rmsModel'] = None
+        return rst[returnType]
     lnpriorValue = lnprior(parsDic)
     inc = np.arccos(cosinc)
     Beta = np.zeros(model['lum2d'].shape[0]) + beta
     sigma = model['pot2d'][:, 1] / model['Re_arcsec']
     ML = util_mge.ml_gradient_gaussian(sigma, 10**logdelta, ml0=ml)
-    sgnfgJAM = model['JAM']
+    JAM = model['JAM']
     dh = util_dm.gnfw1d(10**logrho_s, rs, gamma)
     dh_mge3d = dh.mge3d()
-    rmsModel = sgnfgJAM.run(inc, Beta, ml=ML, mge_dh=dh_mge3d)
-    if returnRms:
-        return rmsModel
+    rmsModel = JAM.run(inc, Beta, ml=ML, mge_dh=dh_mge3d)
     chi2 = (((rmsModel[model['goodbins']] - model['rms'][model['goodbins']]) /
              model['errRms'][model['goodbins']])**2).sum()
-    if returnChi2:
-        return chi2
     if np.isnan(chi2):
         print('Warning - JAM return nan value, beta={:.2f} may not'
               ' be correct'.format(beta))
-        return -np.inf
-    return -0.5*chi2 + lnpriorValue
+        rst['lnprob'] = -np.inf
+        rst['chi2'] = np.inf
+        rst['flux'] = None
+        rst['rmsModel'] = None
+        return rst[returnType]
+
+    rst['lnprob'] = -0.5*chi2 + lnpriorValue
+    rst['chi2'] = chi2
+    rst['flux'] = JAM.flux
+    rst['rmsModel'] = rmsModel
+    return rst[returnType]
 
 
-def lnprob_spherical_gNFW_gas(pars, returnRms=False, returnChi2=False,
-                              model=None):
+def lnprob_spherical_gNFW_gas(pars, returnType='lnprob', model=None):
     cosinc, beta, ml, logrho_s, rs, gamma = pars
     # print pars
     parsDic = {'cosinc': cosinc, 'beta': beta, 'ml': ml,
                'logrho_s': logrho_s, 'rs': rs, 'gamma': gamma}
+    rst = {}
     if np.isinf(check_boundary(parsDic)):
-        if returnChi2:
-            return np.inf
-        return -np.inf
+        rst['lnprob'] = -np.inf
+        rst['chi2'] = np.inf
+        rst['flux'] = None
+        rst['rmsModel'] = None
+        return rst[returnType]
     lnpriorValue = lnprior(parsDic)
     inc = np.arccos(cosinc)
     Beta = np.zeros(model['lum2d'].shape[0]) + beta
-    sgnfJAM = model['JAM']
+    JAM = model['JAM']
     dh = util_dm.gnfw1d(10**logrho_s, rs, gamma)
     dh_mge3d = dh.mge3d()
     dh_mge3d = np.append(model['gas3d'], dh_mge3d, axis=0)  # add gas mge
-    rmsModel = sgnfJAM.run(inc, Beta, ml=ml, mge_dh=dh_mge3d)
-    if returnRms:
-        return rmsModel
+    rmsModel = JAM.run(inc, Beta, ml=ml, mge_dh=dh_mge3d)
     chi2 = (((rmsModel[model['goodbins']] - model['rms'][model['goodbins']]) /
              model['errRms'][model['goodbins']])**2).sum()
-    if returnChi2:
-        return chi2
     if np.isnan(chi2):
         print('Warning - JAM return nan value, beta={:.2f} may not'
               ' be correct'.format(beta))
-        return -np.inf
-    return -0.5*chi2 + lnpriorValue
+        rst['lnprob'] = -np.inf
+        rst['chi2'] = np.inf
+        rst['flux'] = None
+        rst['rmsModel'] = None
+        return rst[returnType]
+
+    rst['lnprob'] = -0.5*chi2 + lnpriorValue
+    rst['chi2'] = chi2
+    rst['flux'] = JAM.flux
+    rst['rmsModel'] = rmsModel
+    return rst[returnType]
 
 
-def lnprob_spherical_total_dpl(pars, returnRms=False, returnChi2=False,
-                               model=None):
+def lnprob_spherical_total_dpl(pars, returnType='lnprob', model=None):
     cosinc, beta, logrho_s, rs, gamma = pars
     # print pars
     parsDic = {'cosinc': cosinc, 'beta': beta,
                'logrho_s': logrho_s, 'rs': rs, 'gamma': gamma}
+    rst = {}
     if np.isinf(check_boundary(parsDic)):
-        if returnChi2:
-            return np.inf
-        return -np.inf
+        rst['lnprob'] = -np.inf
+        rst['chi2'] = np.inf
+        rst['flux'] = None
+        rst['rmsModel'] = None
+        return rst[returnType]
     lnpriorValue = lnprior(parsDic)
     inc = np.arccos(cosinc)
     Beta = np.zeros(model['lum2d'].shape[0]) + beta
-    stdplJAM = model['JAM']
+    JAM = model['JAM']
     dh = util_dm.gnfw1d(10**logrho_s, rs, gamma)
     dh_mge3d = dh.mge3d()
-    rmsModel = stdplJAM.run(inc, Beta, ml=0.0, mge_dh=dh_mge3d)
-    if returnRms:
-        return rmsModel
+    rmsModel = JAM.run(inc, Beta, ml=0.0, mge_dh=dh_mge3d)
     chi2 = (((rmsModel[model['goodbins']] - model['rms'][model['goodbins']]) /
              model['errRms'][model['goodbins']])**2).sum()
-    if returnChi2:
-        return chi2
     if np.isnan(chi2):
         print('Warning - JAM return nan value, beta={:.2f} may not'
               ' be correct'.format(beta))
-        return -np.inf
-    return -0.5*chi2 + lnpriorValue
+        rst['lnprob'] = -np.inf
+        rst['chi2'] = np.inf
+        rst['flux'] = None
+        rst['rmsModel'] = None
+        return rst[returnType]
+
+    rst['lnprob'] = -0.5*chi2 + lnpriorValue
+    rst['chi2'] = chi2
+    rst['flux'] = JAM.flux
+    rst['rmsModel'] = rmsModel
+    return rst[returnType]
 
 
 class mcmc:
@@ -392,7 +427,7 @@ class mcmc:
       nrad: interpolation grid size, integer. Default: 25
     3. Emcee arguments
       burnin: Number of steps for burnin, integer. Default: 500 steps
-      clip: if run mcmc with 3-sigma clip, bool. Default: False
+      clip: clip run method, string. noclip or sigma. Default: noclip
       clipStep: Number of steps for each clip, integer. Default: 1000 steps
       runStep: Number of steps for the final run, integer. Default: 1000 steps
       nwalkers: Number of walkers in mcmc, integer. Default: 30
