@@ -24,35 +24,35 @@ label_font = util_fig.label_font
 def printParameters(names, values):
     temp = ['{}: {:.2f}  '.format(names[i], values[i])
             for i in range(len(names))]
-    print ''.join(temp)
+    print(''.join(temp))
 
 
 def printModelInfo(model):
-    print '--------------------------------------------------'
-    print 'Model Info'
-    print 'pyJAM model run at {}'.format(model['date'])
-    print 'Galaxy name: {}'.format(model.get('name', None))
-    print 'Model type: {}'.format(model.get('type', None))
-    print 'Number of tracer MGEs: {}'.format(model['lum2d'].shape[0])
-    print ('Number of luminous potential MGEs: {}'
-           .format(model['pot2d'].shape[0]))
-    print ('Number of good observational bins: {}/{}'
-           .format(model['goodbins'].sum(), len(model['goodbins'])))
-    print 'Effective radius: {:.2f} arcsec'.format(model['Re_arcsec'])
-    print 'errScale {:.2f}'.format(model['errScale'])
-    print 'Model shape: {}'.format(model['shape'])
-    print 'Sigmapsf: {:.2f}  Pixelsize: {:.2f}'.format(model['sigmapsf'],
-                                                       model['pixsize'])
-    print 'Burning steps: {}'.format(model['burnin'])
-    print 'Clip:  {}'.format(model['clip'])
+    print('--------------------------------------------------')
+    print('Model Info')
+    print('pyJAM model run at {}'.format(model['date']))
+    print('Galaxy name: {}'.format(model.get('name', None)))
+    print('Model type: {}'.format(model.get('type', None)))
+    print('Number of tracer MGEs: {}'.format(model['lum2d'].shape[0]))
+    print('Number of luminous potential MGEs: {}'
+          .format(model['pot2d'].shape[0]))
+    print('Number of good observational bins: {}/{}'
+          .format(model['goodbins'].sum(), len(model['goodbins'])))
+    print('Effective radius: {:.2f} arcsec'.format(model['Re_arcsec']))
+    print('errScale {:.2f}'.format(model['errScale']))
+    print('Model shape: {}'.format(model['shape']))
+    print('Sigmapsf: {:.2f}  Pixelsize: {:.2f}'.format(model['sigmapsf'],
+                                                       model['pixsize']))
+    print('Burning steps: {}'.format(model['burnin']))
+    print('Clip:  {}'.format(model['clip']))
     if model['clip'] in ['sigma']:
-        print 'Clip steps: {}'.format(model['clipStep'])
+        print('Clip steps: {}'.format(model['clipStep']))
         if model['clip'] == 'sigma':
-            print 'Sigma for sigmaclip: {:.2f}'.format(model['clipSigma'])
-    print 'nwalkers: {}'.format(model['nwalkers'])
-    print 'Run steps: {}'.format(model['runStep'])
-    print 'Initial positons of mcmc chains: {}'.format(model['p0'])
-    print '--------------------------------------------------'
+            print('Sigma for sigmaclip: {:.2f}'.format(model['clipSigma']))
+    print('nwalkers: {}'.format(model['nwalkers']))
+    print('Run steps: {}'.format(model['runStep']))
+    print('Initial positons of mcmc chains: {}'.format(model['p0']))
+    print('--------------------------------------------------')
 
 
 def printBoundaryPrior(model):
@@ -61,10 +61,10 @@ def printBoundaryPrior(model):
     prior = model['prior']
     boundary = model['boundary']
     for name in JAMpars:
-        print ('{:10s} - prior: {:8.3f} {:10.3e}'
-               '    - boundary: [{:8.3f}, {:8.3f}]'
-               .format(name, prior[name][0], prior[name][1],
-                       boundary[name][0], boundary[name][1]))
+        print('{:10s} - prior: {:8.3f} {:10.3e}'
+              '    - boundary: [{:8.3f}, {:8.3f}]'
+              .format(name, prior[name][0], prior[name][1],
+                      boundary[name][0], boundary[name][1]))
 
 
 def load(name, path='.'):
@@ -97,6 +97,7 @@ def estimatePrameters(flatchain, method='median', flatlnprob=None):
 
 
 class modelRst(object):
+
     def __init__(self, name, path='.', burnin=0, best='median'):
         self.data = load(name, path=path)
         # load model data into class
@@ -107,9 +108,9 @@ class modelRst(object):
         # check good chain fraction
         if self.goodchains.sum()/float(self.nwalkers) < 0.6:
             self.goodchains = np.ones_like(self.goodchains, dtype=bool)
-            print 'Warning - goodchain fraction less than 0.6'
-            print 'Acceptance fraction:'
-            print self.data['rst']['acceptance_fraction']
+            print('Warning - goodchain fraction less than 0.6')
+            print('Acceptance fraction:')
+            print(self.data['rst']['acceptance_fraction'])
         self.lnprob = self.data['rst']['lnprobability']
         self.flatchain = self.chain[self.goodchains,
                                     burnin:, :].reshape(-1, self.ndim)
@@ -143,7 +144,7 @@ class modelRst(object):
         cosinc = self.bestPars.get('cosinc', np.pi/2.0)
         self.inc = np.arccos(cosinc)
         if 'ml' not in self.bestPars.keys():
-            print ('Waring - do not find ml parameter, set to 1.0')
+            print('Waring - do not find ml parameter, set to 1.0')
 
         self.ml = self.bestPars.get('ml', 1.0)
         # load observational data
@@ -164,6 +165,11 @@ class modelRst(object):
 
         # run a JAM model with the choosen best model parameters
         JAMmodel = self.data['JAM']  # restore JAM model
+        JAMlnprob = self.data['lnprob']
+        self.rmsModel = JAMlnprob(bestPars, model=self.data,
+                                  returnType='rmsModel')
+        self.flux = JAMlnprob(bestPars, model=self.data,
+                              returnType='flux')
         self.shape = self.data['shape']
         # create stellar mass mge objected (used in mass profile)
         self.LmMge = util_mge.mge(self.pot2d, inc=self.inc, shape=self.shape,
@@ -177,29 +183,16 @@ class modelRst(object):
             self.BhMge = util_mge.mge(bh2dmge, inc=self.inc)
 
         if self.data['type'] == 'massFollowLight':
-            inc = self.inc
-            Beta = np.zeros(self.lum2d.shape[0]) + bestPars[1]
-            ml = bestPars[2]
-            self.rmsModel = JAMmodel.run(inc, Beta, ml=ml)
-            self.flux = JAMmodel.flux
             self.labels = [r'$\mathbf{cosi}$', r'$\mathbf{\beta}$',
                            r'$\mathbf{M/L}$']
             self.DmMge = None  # no dark halo
         elif self.data['type'] == 'spherical_gNFW':
-            inc = self.inc
-            Beta = np.zeros(self.lum2d.shape[0]) + bestPars[1]
-            ml = bestPars[2]
-            logrho_s = bestPars[3]
-            rs = bestPars[4]
-            gamma = bestPars[5]
-            dh = util_dm.gnfw1d(10**logrho_s, rs, gamma)
-            dh_mge3d = dh.mge3d()
-            self.rmsModel = JAMmodel.run(inc, Beta, ml=ml, mge_dh=dh_mge3d)
-            self.flux = JAMmodel.flux
             self.labels = [r'$\mathbf{cosi}$', r'$\mathbf{\beta}$',
                            r'$\mathbf{M^*/L}$', r'$\mathbf{log\ \rho_s}$',
                            r'$\mathbf{r_s}$', r'$\mathbf{\gamma}$']
             # create dark halo mass mge object
+            dh = JAMlnprob(bestPars, model=self.data, returnType='dh')
+            dh_mge3d = dh.mge3d()
             self.DmMge = util_mge.mge(dh.mge2d(), inc=self.inc)
         elif self.data['type'] == 'spherical_gNFW_gas':
             inc = self.inc
@@ -220,33 +213,22 @@ class modelRst(object):
             # create dark halo mass mge object
             self.DmMge = util_mge.mge(dh.mge2d(), inc=self.inc)
         elif self.data['type'] == 'spherical_gNFW_gradient':
-            inc = self.inc
-            Beta = np.zeros(self.lum2d.shape[0]) + bestPars[1]
-            ml = bestPars[2]
-            logdelta = bestPars[3]
-            sigma = self.pot2d[:, 1] / self.data['Re_arcsec']
-            ML = util_mge.ml_gradient_gaussian(sigma, 10**logdelta, ml0=ml)
-            logrho_s = bestPars[4]
-            rs = bestPars[5]
-            gamma = bestPars[6]
-            # inc = np.arccos(0.078)
-            # Beta = 0.144 + np.zeros(self.lum2d.shape[0])
-            # ml = 3.962
-            # logdelta = -1.0
-            # ML = util_mge.ml_gradient_gaussian(sigma, 10**logdelta, ml0=ml)
-            # logrho_s = 6.593
-            # rs = 31.299
-            # gamma = -1.108
-            dh = util_dm.gnfw1d(10**logrho_s, rs, gamma)
-            dh_mge3d = dh.mge3d()
-            self.rmsModel = JAMmodel.run(inc, Beta, ml=ML, mge_dh=dh_mge3d)
-            self.flux = JAMmodel.flux
             self.labels = [r'$\mathbf{cosi}$', r'$\mathbf{\beta}$',
                            r'$\mathbf{M^*/L}$',
                            r'$\mathbf{\log \Delta_{IMF}}$',
                            r'$\mathbf{log\ \rho_s}$',
                            r'$\mathbf{r_s}$', r'$\mathbf{\gamma}$']
             # create dark halo mass mge object
+            dh = JAMlnprob(bestPars, model=self.data, returnType='dh')
+            dh_mge3d = dh.mge3d()
+            self.DmMge = util_mge.mge(dh.mge2d(), inc=self.inc)
+        elif self.data['type'] == 'spherical_total_dpl':
+            self.labels = [r'$\mathbf{cosi}$', r'$\mathbf{\beta}$',
+                           r'$\mathbf{log\ \rho_s}$',
+                           r'$\mathbf{r_s}$', r'$\mathbf{\gamma}$']
+            # create dark halo mass mge object
+            dh = JAMlnprob(bestPars, model=self.data, returnType='dh')
+            dh_mge3d = dh.mge3d()
             self.DmMge = util_mge.mge(dh.mge2d(), inc=self.inc)
         else:
             raise ValueError('model type {} not supported'
@@ -376,7 +358,7 @@ class modelRst(object):
     def dump(self, outpath, name='rst.dat'):
         data = {}
         chi2 = np.sum((((self.data['rms'] - self.rmsModel) /
-                       self.data['errRms'])**2)[self.goodbins]) /\
+                        self.data['errRms'])**2)[self.goodbins]) /\
             self.goodbins.sum()
         data['chi2dof'] = chi2
         data['Re_arcsec'] = self.data['Re_arcsec']
