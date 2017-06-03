@@ -203,7 +203,8 @@ def _runEmcee(sampler, p0):
     return sampler
 
 
-def lnprob_massFollowLight(pars, returnRms=False, returnChi2=False):
+def lnprob_massFollowLight(pars, returnRms=False, returnChi2=False,
+                           model=None):
     cosinc, beta, ml = pars
     # print pars
     parsDic = {'cosinc': cosinc, 'beta': beta, 'ml': ml}
@@ -229,7 +230,8 @@ def lnprob_massFollowLight(pars, returnRms=False, returnChi2=False):
     return -0.5*chi2 + lnpriorValue
 
 
-def lnprob_spherical_gNFW(pars, returnRms=False, returnChi2=False):
+def lnprob_spherical_gNFW(pars, returnRms=False, returnChi2=False,
+                          model=None):
     cosinc, beta, ml, logrho_s, rs, gamma = pars
     # print pars
     parsDic = {'cosinc': cosinc, 'beta': beta, 'ml': ml,
@@ -258,7 +260,8 @@ def lnprob_spherical_gNFW(pars, returnRms=False, returnChi2=False):
     return -0.5*chi2 + lnpriorValue
 
 
-def lnprob_spherical_gNFW_gradient(pars, returnRms=False, returnChi2=False):
+def lnprob_spherical_gNFW_gradient(pars, returnRms=False, returnChi2=False,
+                                   model=None):
     cosinc, beta, ml, logdelta, logrho_s, rs, gamma = pars
     # print pars
     parsDic = {'cosinc': cosinc, 'beta': beta, 'ml': ml, 'logdelta': logdelta,
@@ -289,7 +292,8 @@ def lnprob_spherical_gNFW_gradient(pars, returnRms=False, returnChi2=False):
     return -0.5*chi2 + lnpriorValue
 
 
-def lnprob_spherical_gNFW_gas(pars, returnRms=False, returnChi2=False):
+def lnprob_spherical_gNFW_gas(pars, returnRms=False, returnChi2=False,
+                              model=None):
     cosinc, beta, ml, logrho_s, rs, gamma = pars
     # print pars
     parsDic = {'cosinc': cosinc, 'beta': beta, 'ml': ml,
@@ -319,7 +323,8 @@ def lnprob_spherical_gNFW_gas(pars, returnRms=False, returnChi2=False):
     return -0.5*chi2 + lnpriorValue
 
 
-def lnprob_spherical_total_dpl(pars, returnRms=False, returnChi2=False):
+def lnprob_spherical_total_dpl(pars, returnRms=False, returnChi2=False,
+                               model=None):
     cosinc, beta, logrho_s, rs, gamma = pars
     # print pars
     parsDic = {'cosinc': cosinc, 'beta': beta,
@@ -581,7 +586,7 @@ class mcmc:
         # Initialize sampler
         initSampler = \
             emcee.EnsembleSampler(nwalkers, ndim, model['lnprob'],
-                                  threads=threads)
+                                  kwargs={'model': model}, threads=threads)
         sys.stdout.flush()
         sampler = _runEmcee(initSampler, p0)
         # pool.close()
@@ -625,7 +630,7 @@ class mcmc:
                              'not supported'.format(model['p0']))
         initSampler = \
             emcee.EnsembleSampler(nwalkers, ndim, model['lnprob'],
-                                  threads=threads)
+                                  kwargs={'model': model}, threads=threads)
         sys.stdout.flush()
         sampler = _runEmcee(initSampler, p0)
         # pool.close()
@@ -670,7 +675,7 @@ class mcmc:
                              'not supported'.format(model['p0']))
         initSampler = \
             emcee.EnsembleSampler(nwalkers, ndim, model['lnprob'],
-                                  threads=threads)
+                                  kwargs={'model': model}, threads=threads)
         sys.stdout.flush()
         sampler = _runEmcee(initSampler, p0)
         # pool.close()
@@ -720,7 +725,7 @@ class mcmc:
                              'not supported'.format(model['p0']))
         initSampler = \
             emcee.EnsembleSampler(nwalkers, ndim, model['lnprob'],
-                                  threads=threads)
+                                  kwargs={'model': model}, threads=threads)
         sys.stdout.flush()
         sampler = _runEmcee(initSampler, p0)
         # pool.close()
@@ -764,7 +769,7 @@ class mcmc:
                              'not supported'.format(model['p0']))
         initSampler = \
             emcee.EnsembleSampler(nwalkers, ndim, model['lnprob'],
-                                  threads=threads)
+                                  kwargs={'model': model}, threads=threads)
         sys.stdout.flush()
         sampler = _runEmcee(initSampler, p0)
         # pool.close()
