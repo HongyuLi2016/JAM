@@ -331,10 +331,10 @@ def lnprob_spherical_total_dpl(pars, returnRms=False, returnChi2=False):
     lnpriorValue = lnprior(parsDic)
     inc = np.arccos(cosinc)
     Beta = np.zeros(model['lum2d'].shape[0]) + beta
-    sgnfJAM = model['JAM']
+    stdplJAM = model['JAM']
     dh = util_dm.gnfw1d(10**logrho_s, rs, gamma)
     dh_mge3d = dh.mge3d()
-    rmsModel = sgnfJAM.run(inc, Beta, ml=ml, mge_dh=dh_mge3d)
+    rmsModel = stdplJAM.run(inc, Beta, ml=0.0, mge_dh=dh_mge3d)
     if returnRms:
         return rmsModel
     chi2 = (((rmsModel[model['goodbins']] - model['rms'][model['goodbins']]) /
@@ -705,6 +705,50 @@ class mcmc:
 
         printModelInfo(model)
         print('Gas Mass: {:.4e}'.format(model['Mgas']))
+        printBoundaryPrior(model)
+        nwalkers = model['nwalkers']
+        threads = model['threads']
+        ndim = model['ndim']
+        JAMpars = model['JAMpars']
+        if model['p0'] == 'flat':
+            p0 = flat_initp(JAMpars, nwalkers)
+        elif model['p0'] == 'fit':
+            raise ValueError('Calculate maximum lnprob positon from '
+                             'optimisiztion - not implemented yet')
+        else:
+            raise ValueError('p0 must be flat or fit, {} is '
+                             'not supported'.format(model['p0']))
+        initSampler = \
+            emcee.EnsembleSampler(nwalkers, ndim, model['lnprob'],
+                                  threads=threads)
+        sys.stdout.flush()
+        sampler = _runEmcee(initSampler, p0)
+        # pool.close()
+        print('--------------------------------------------------')
+        print('Finish! Total elapsed time: {:.2f}s'
+              .format(time()-self.startTime))
+        rst = analyzeRst(sampler)
+        sys.stdout.flush()
+        model['rst'] = rst
+        dump()
+
+    def spherical_total_dpl(self):
+        print('--------------------------------------------------')
+        print('spherical double power-law total mass model')
+        model['lnprob'] = lnprob_spherical_total_dpl
+        model['type'] = 'spherical_total_dpl'
+        model['ndim'] = 5
+        model['JAMpars'] = ['cosinc', 'beta', 'logrho_s', 'rs', 'gamma']
+        # initialize the JAM class and pass to the global parameter
+        model['JAM'] = \
+            pyjam.axi_rms.jam(model['lum2d'], model['pot2d'],
+                              model['distance'],
+                              model['xbin'], model['ybin'], mbh=model['bh'],
+                              quiet=True, sigmapsf=model['sigmapsf'],
+                              pixsize=model['pixsize'], nrad=model['nrad'],
+                              shape=model['shape'])
+
+        printModelInfo(model)
         printBoundaryPrior(model)
         nwalkers = model['nwalkers']
         threads = model['threads']
