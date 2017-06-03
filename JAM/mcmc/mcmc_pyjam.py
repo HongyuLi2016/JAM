@@ -89,14 +89,14 @@ def analyzeRst(sampler, nburnin=0):
         rst['acor'] = sampler.acor
     except:
         rst['acor'] = np.nan
-    print 'Mean autocorrelation time: {:.1f}'.format(np.mean(rst['acor']))
+    print('Mean autocorrelation time: {:.1f}'.format(np.mean(rst['acor'])))
     rst['acceptance_fraction'] = sampler.acceptance_fraction
     rst['goodchains'] = ((rst['acceptance_fraction'] > 0.15) *
                          (rst['acceptance_fraction'] < 0.75))
-    print ('Mean accept fraction: {:.3f}'
-           .format(np.mean(rst['acceptance_fraction'])))
+    print('Mean accept fraction: {:.3f}'
+          .format(np.mean(rst['acceptance_fraction'])))
     if rst['goodchains'].sum() / float(model['nwalkers']) < 0.6:
-        print 'Warning - goodchain fraction less than 0.6'
+        print('Warning - goodchain fraction less than 0.6')
         goodchains = np.ones_like(rst['goodchains'], dtype=bool)
     else:
         goodchains = rst['goodchains']
@@ -113,13 +113,13 @@ def analyzeRst(sampler, nburnin=0):
     rst['meanPars'] = meanPars
     rst['peakPars'] = peakPars
     rst['maxPars'] = maxPars
-    print 'medianPars'
+    print('medianPars')
     printParameters(model['JAMpars'], medianPars)
-    print 'meanPars'
+    print('meanPars')
     printParameters(model['JAMpars'], meanPars)
-    print 'peakPars'
+    print('peakPars')
     printParameters(model['JAMpars'], peakPars)
-    print 'maxPars'
+    print('maxPars')
     printParameters(model['JAMpars'], maxPars)
     return rst
 
@@ -151,24 +151,24 @@ def _sigmaClip(sampler, pos):
         chi2dof = ((rmsModel[oldGoodbins] - model['rms'][oldGoodbins])**2 /
                    model['errRms'][oldGoodbins]).sum() / oldGoodbins.sum()
 
-        print '--------------------------------------------------'
-        print 'Time for clip {}: {:.2f}s'.format(N, time()-startTime)
-        print 'best parameters:'
+        print('--------------------------------------------------')
+        print('Time for clip {}: {:.2f}s'.format(N, time()-startTime))
+        print('best parameters:')
         printParameters(model['JAMpars'], pars)
-        print 'Number of old goodbins: {}'.format(oldGoodbins.sum())
-        print 'Number of new goodbins: {}'.format(model['goodbins'].sum())
-        print 'Chi2: {:.2f}'.format(chi2)
-        print 'Chi2/dof: {:.3f}'.format(chi2dof)
+        print('Number of old goodbins: {}'.format(oldGoodbins.sum()))
+        print('Number of new goodbins: {}'.format(model['goodbins'].sum()))
+        print('Chi2: {:.2f}'.format(chi2))
+        print('Chi2/dof: {:.3f}'.format(chi2dof))
         if N >= maxN:
-            print 'Warning - clip more than {}'.format(maxN)
+            print('Warning - clip more than {}'.format(maxN))
             break
         if np.array_equal(model['goodbins'], oldGoodbins):
-            print 'Clip srccess'
+            print('Clip srccess')
             break
         if model['goodbins'].sum() / float(model['initGoodbins'].sum()) <\
            model['minFraction']:
-            print ('clip too many pixels: goodbin fraction < {:.2f}'
-                   .format(model['minFraction']))
+            print('clip too many pixels: goodbin fraction < {:.2f}'
+                  .format(model['minFraction']))
             break
         sys.stdout.flush()
     sys.stdout.flush()
@@ -181,8 +181,8 @@ def _runEmcee(sampler, p0):
     # burnin
     startTime = time()
     pos, prob, state = sampler.run_mcmc(p0, burninStep)
-    print 'Start running'
-    print 'Time for burnin: {:.2f}s'.format(time()-startTime)
+    print('Start running')
+    print('Time for burnin: {:.2f}s'.format(time()-startTime))
     sys.stdout.flush()
     flatchain = sampler.flatchain
     flatlnprob = sampler.flatlnprobability
@@ -223,8 +223,8 @@ def lnprob_massFollowLight(pars, returnRms=False, returnChi2=False):
     if returnChi2:
         return chi2
     if np.isnan(chi2):
-        print ('Warning - JAM return nan value, beta={:.2f} may not'
-               ' be correct'.format(beta))
+        print('Warning - JAM return nan value, beta={:.2f} may not'
+              ' be correct'.format(beta))
         return -np.inf
     return -0.5*chi2 + lnpriorValue
 
@@ -252,8 +252,8 @@ def lnprob_spherical_gNFW(pars, returnRms=False, returnChi2=False):
     if returnChi2:
         return chi2
     if np.isnan(chi2):
-        print ('Warning - JAM return nan value, beta={:.2f} may not'
-               ' be correct'.format(beta))
+        print('Warning - JAM return nan value, beta={:.2f} may not'
+              ' be correct'.format(beta))
         return -np.inf
     return -0.5*chi2 + lnpriorValue
 
@@ -283,8 +283,8 @@ def lnprob_spherical_gNFW_gradient(pars, returnRms=False, returnChi2=False):
     if returnChi2:
         return chi2
     if np.isnan(chi2):
-        print ('Warning - JAM return nan value, beta={:.2f} may not'
-               ' be correct'.format(beta))
+        print('Warning - JAM return nan value, beta={:.2f} may not'
+              ' be correct'.format(beta))
         return -np.inf
     return -0.5*chi2 + lnpriorValue
 
@@ -313,8 +313,37 @@ def lnprob_spherical_gNFW_gas(pars, returnRms=False, returnChi2=False):
     if returnChi2:
         return chi2
     if np.isnan(chi2):
-        print ('Warning - JAM return nan value, beta={:.2f} may not'
-               ' be correct'.format(beta))
+        print('Warning - JAM return nan value, beta={:.2f} may not'
+              ' be correct'.format(beta))
+        return -np.inf
+    return -0.5*chi2 + lnpriorValue
+
+
+def lnprob_spherical_total_dpl(pars, returnRms=False, returnChi2=False):
+    cosinc, beta, logrho_s, rs, gamma = pars
+    # print pars
+    parsDic = {'cosinc': cosinc, 'beta': beta,
+               'logrho_s': logrho_s, 'rs': rs, 'gamma': gamma}
+    if np.isinf(check_boundary(parsDic)):
+        if returnChi2:
+            return np.inf
+        return -np.inf
+    lnpriorValue = lnprior(parsDic)
+    inc = np.arccos(cosinc)
+    Beta = np.zeros(model['lum2d'].shape[0]) + beta
+    sgnfJAM = model['JAM']
+    dh = util_dm.gnfw1d(10**logrho_s, rs, gamma)
+    dh_mge3d = dh.mge3d()
+    rmsModel = sgnfJAM.run(inc, Beta, ml=ml, mge_dh=dh_mge3d)
+    if returnRms:
+        return rmsModel
+    chi2 = (((rmsModel[model['goodbins']] - model['rms'][model['goodbins']]) /
+             model['errRms'][model['goodbins']])**2).sum()
+    if returnChi2:
+        return chi2
+    if np.isnan(chi2):
+        print('Warning - JAM return nan value, beta={:.2f} may not'
+              ' be correct'.format(beta))
         return -np.inf
     return -0.5*chi2 + lnpriorValue
 
@@ -367,6 +396,7 @@ class mcmc:
       outfolder: output folder path. Default: '.'
       fname: output filename. Default: 'dump.dat'
     '''
+
     def __init__(self, galaxy):
         '''
         initialize model parameters and data
@@ -463,8 +493,8 @@ class mcmc:
             boundary['beta'][0] = -1.0
             boundary['beta'][1] = 0.0
         self.startTime = time()
-        print '**************************************************'
-        print 'Initialize mcmc success!'
+        print('**************************************************')
+        print('Initialize mcmc success!')
 
     def set_boundary(self, key, value):
         '''
@@ -476,9 +506,9 @@ class mcmc:
             raise ValueError('parameter name \'{}\' not correct'.format(key))
         if len(value) != 2:
             raise ValueError('Boundary limits must be a length 2 list')
-        print ('Change {} limits to [{}, {}], defaults are [{}, {}]'
-               .format(key, value[0], value[1], boundary[key][0],
-                       boundary[key][1]))
+        print('Change {} limits to [{}, {}], defaults are [{}, {}]'
+              .format(key, value[0], value[1], boundary[key][0],
+                      boundary[key][1]))
         boundary[key] = value
 
     def set_prior(self, key, value):
@@ -491,8 +521,8 @@ class mcmc:
             raise ValueError('parameter name \'{}\' not correct'.format(key))
         if len(value) != 2:
             raise ValueError('prior must be a length 2 list')
-        print ('Change {} prior to [{}, {}], defaults are [{}, {}]'
-               .format(key, value[0], value[1], prior[key][0], prior[key][1]))
+        print('Change {} prior to [{}, {}], defaults are [{}, {}]'
+              .format(key, value[0], value[1], prior[key][0], prior[key][1]))
         prior[key] = value
 
     def set_config(self, key, value):
@@ -502,11 +532,11 @@ class mcmc:
         value: allowed values
         '''
         if key not in model.keys():
-            print 'key {} does not exist, create a new key'.format(key)
+            print('key {} does not exist, create a new key'.format(key))
             model[key] = value
         else:
-            print ('Change parameter {} to {}, original value is {}'
-                   .format(key, value, model[key]))
+            print('Change parameter {} to {}, original value is {}'
+                  .format(key, value, model[key]))
             model[key] = value
 
     def get_config(self, key):
@@ -516,8 +546,8 @@ class mcmc:
         return model.get(key, None)
 
     def massFollowLight(self):
-        print '--------------------------------------------------'
-        print 'Mass follow light model'
+        print('--------------------------------------------------')
+        print('Mass follow light model')
         model['lnprob'] = lnprob_massFollowLight
         model['type'] = 'massFollowLight'
         model['ndim'] = 3
@@ -555,17 +585,17 @@ class mcmc:
         sys.stdout.flush()
         sampler = _runEmcee(initSampler, p0)
         # pool.close()
-        print '--------------------------------------------------'
-        print ('Finish! Total elapsed time: {:.2f}s'
-               .format(time()-self.startTime))
+        print('--------------------------------------------------')
+        print('Finish! Total elapsed time: {:.2f}s'
+              .format(time()-self.startTime))
         rst = analyzeRst(sampler)
         sys.stdout.flush()
         model['rst'] = rst
         dump()
 
     def spherical_gNFW(self):
-        print '--------------------------------------------------'
-        print 'spherical gNFW model'
+        print('--------------------------------------------------')
+        print('spherical gNFW model')
         model['lnprob'] = lnprob_spherical_gNFW
         model['type'] = 'spherical_gNFW'
         model['ndim'] = 6
@@ -599,17 +629,17 @@ class mcmc:
         sys.stdout.flush()
         sampler = _runEmcee(initSampler, p0)
         # pool.close()
-        print '--------------------------------------------------'
-        print ('Finish! Total elapsed time: {:.2f}s'
-               .format(time()-self.startTime))
+        print('--------------------------------------------------')
+        print('Finish! Total elapsed time: {:.2f}s'
+              .format(time()-self.startTime))
         rst = analyzeRst(sampler)
         sys.stdout.flush()
         model['rst'] = rst
         dump()
 
     def spherical_gNFW_gradient(self):
-        print '--------------------------------------------------'
-        print 'spherical gNFW model with stellar M*/L gradient'
+        print('--------------------------------------------------')
+        print('spherical gNFW model with stellar M*/L gradient')
         model['lnprob'] = lnprob_spherical_gNFW_gradient
         model['type'] = 'spherical_gNFW_gradient'
         model['ndim'] = 7
@@ -644,17 +674,17 @@ class mcmc:
         sys.stdout.flush()
         sampler = _runEmcee(initSampler, p0)
         # pool.close()
-        print '--------------------------------------------------'
-        print ('Finish! Total elapsed time: {:.2f}s'
-               .format(time()-self.startTime))
+        print('--------------------------------------------------')
+        print('Finish! Total elapsed time: {:.2f}s'
+              .format(time()-self.startTime))
         rst = analyzeRst(sampler)
         sys.stdout.flush()
         model['rst'] = rst
         dump()
 
     def spherical_gNFW_gas(self):
-        print '--------------------------------------------------'
-        print 'spherical gNFW + gas model'
+        print('--------------------------------------------------')
+        print('spherical gNFW + gas model')
         # calculate gas mge profile
         if model['Mgas'] is None:
             raise RuntimeError('Gas mass must be provided')
@@ -674,7 +704,7 @@ class mcmc:
                               shape=model['shape'])
 
         printModelInfo(model)
-        print 'Gas Mass: {:.4e}'.format(model['Mgas'])
+        print('Gas Mass: {:.4e}'.format(model['Mgas']))
         printBoundaryPrior(model)
         nwalkers = model['nwalkers']
         threads = model['threads']
@@ -694,17 +724,17 @@ class mcmc:
         sys.stdout.flush()
         sampler = _runEmcee(initSampler, p0)
         # pool.close()
-        print '--------------------------------------------------'
-        print ('Finish! Total elapsed time: {:.2f}s'
-               .format(time()-self.startTime))
+        print('--------------------------------------------------')
+        print('Finish! Total elapsed time: {:.2f}s'
+              .format(time()-self.startTime))
         rst = analyzeRst(sampler)
         sys.stdout.flush()
         model['rst'] = rst
         dump()
 
     def chi2_spherical_gNFW(self, p0=None, options=None, method='Nelder-Mead'):
-        print '--------------------------------------------------'
-        print 'Minimize chi2 for spherical gNFW model'
+        print('--------------------------------------------------')
+        print('Minimize chi2 for spherical gNFW model')
         model['lnprob'] = lnprob_spherical_gNFW
         model['type'] = 'spherical_gNFW'
         model['ndim'] = 6
@@ -728,24 +758,24 @@ class mcmc:
         res = minimize(lnprob_spherical_gNFW, p0, args=(False, True),
                        bounds=bounds, method=method, options=options)
         for i in range(len(p0)):
-            print 'Init: {:10.6f} fit: {:10.6f}'.format(p0[i], res.x[i])
+            print('Init: {:10.6f} fit: {:10.6f}'.format(p0[i], res.x[i]))
         chi2 = lnprob_spherical_gNFW(res.x, False, True)
-        print 'chi2: {:.4f}'.format(chi2)
+        print('chi2: {:.4f}'.format(chi2))
         chi2 = lnprob_spherical_gNFW(p0, False, True)
-        print 'chi2: {:.4f}'.format(chi2)
+        print('chi2: {:.4f}'.format(chi2))
         # printModelInfo(model)
         # printBoundaryPrior(model)
         # nwalkers = model['nwalkers']
         # threads = model['threads']
         # ndim = model['ndim']
         # JAMpars = model['JAMpars']
-        print '--------------------------------------------------'
+        print('--------------------------------------------------')
 
     def run_spherical_gNFW(self, par, plot=False, save=True, path='./',
                            fname='single_rst', vmap='map', markersize=0.5,
                            rDot=0.24):
-        print '--------------------------------------------------'
-        print 'Run spherical gNFW model with given parameters'
+        print('--------------------------------------------------')
+        print('Run spherical gNFW model with given parameters')
         model['lnprob'] = lnprob_spherical_gNFW
         model['type'] = 'spherical_gNFW'
         model['ndim'] = 6
@@ -768,10 +798,10 @@ class mcmc:
                        errRms[goodbins])**2)
         chi2_dof = chi2/goodbins.sum()
         for i in range(len(par)):
-            print '{}: {:.4f}'.format(model['JAMpars'][i], par[i])
-        print 'chi2: {:.4f}'.format(chi2)
-        print 'chi2/dof: {:.4f}'.format(chi2_dof)
-        print '--------------------------------------------------'
+            print('{}: {:.4f}'.format(model['JAMpars'][i], par[i]))
+        print('chi2: {:.4f}'.format(chi2))
+        print('chi2/dof: {:.4f}'.format(chi2_dof))
+        print('--------------------------------------------------')
 
         rst = {'xbin': xbin, 'ybin': ybin, 'rms': rms, 'errRms': errRms,
                'goodbins': goodbins, 'rmsModel': rmsModel, 'chi2': chi2,
