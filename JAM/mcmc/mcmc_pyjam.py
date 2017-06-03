@@ -213,6 +213,7 @@ def lnprob_massFollowLight(pars, returnType='lnprob', model=None):
         rst['chi2'] = np.inf
         rst['flux'] = None
         rst['rmsModel'] = None
+        rst['dh'] = None
         return rst[returnType]
     lnpriorValue = lnprior(parsDic)
     inc = np.arccos(cosinc)
@@ -228,12 +229,14 @@ def lnprob_massFollowLight(pars, returnType='lnprob', model=None):
         rst['chi2'] = np.inf
         rst['flux'] = None
         rst['rmsModel'] = None
+        rst['dh'] = None
         return rst[returnType]
 
     rst['lnprob'] = -0.5*chi2 + lnpriorValue
     rst['chi2'] = chi2
     rst['flux'] = JAM.flux
     rst['rmsModel'] = rmsModel
+    rst['dh'] = None
     return rst[returnType]
 
 
@@ -248,6 +251,7 @@ def lnprob_spherical_gNFW(pars, returnType='lnprob', model=None):
         rst['chi2'] = np.inf
         rst['flux'] = None
         rst['rmsModel'] = None
+        rst['dh'] = None
         return rst[returnType]
     lnpriorValue = lnprior(parsDic)
     inc = np.arccos(cosinc)
@@ -265,12 +269,14 @@ def lnprob_spherical_gNFW(pars, returnType='lnprob', model=None):
         rst['chi2'] = np.inf
         rst['flux'] = None
         rst['rmsModel'] = None
+        rst['dh'] = None
         return rst[returnType]
 
     rst['lnprob'] = -0.5*chi2 + lnpriorValue
     rst['chi2'] = chi2
     rst['flux'] = JAM.flux
     rst['rmsModel'] = rmsModel
+    rst['dh'] = dh
     return rst[returnType]
 
 
@@ -285,6 +291,7 @@ def lnprob_spherical_gNFW_gradient(pars, returnType='lnprob', model=None):
         rst['chi2'] = np.inf
         rst['flux'] = None
         rst['rmsModel'] = None
+        rst['dh'] = None
         return rst[returnType]
     lnpriorValue = lnprior(parsDic)
     inc = np.arccos(cosinc)
@@ -304,12 +311,14 @@ def lnprob_spherical_gNFW_gradient(pars, returnType='lnprob', model=None):
         rst['chi2'] = np.inf
         rst['flux'] = None
         rst['rmsModel'] = None
+        rst['dh'] = None
         return rst[returnType]
 
     rst['lnprob'] = -0.5*chi2 + lnpriorValue
     rst['chi2'] = chi2
     rst['flux'] = JAM.flux
     rst['rmsModel'] = rmsModel
+    rst['dh'] = dh
     return rst[returnType]
 
 
@@ -324,6 +333,7 @@ def lnprob_spherical_gNFW_gas(pars, returnType='lnprob', model=None):
         rst['chi2'] = np.inf
         rst['flux'] = None
         rst['rmsModel'] = None
+        rst['dh'] = None
         return rst[returnType]
     lnpriorValue = lnprior(parsDic)
     inc = np.arccos(cosinc)
@@ -342,12 +352,14 @@ def lnprob_spherical_gNFW_gas(pars, returnType='lnprob', model=None):
         rst['chi2'] = np.inf
         rst['flux'] = None
         rst['rmsModel'] = None
+        rst['dh'] = None
         return rst[returnType]
 
     rst['lnprob'] = -0.5*chi2 + lnpriorValue
     rst['chi2'] = chi2
     rst['flux'] = JAM.flux
     rst['rmsModel'] = rmsModel
+    rst['dh'] = dh
     return rst[returnType]
 
 
@@ -362,6 +374,7 @@ def lnprob_spherical_total_dpl(pars, returnType='lnprob', model=None):
         rst['chi2'] = np.inf
         rst['flux'] = None
         rst['rmsModel'] = None
+        rst['dh'] = None
         return rst[returnType]
     lnpriorValue = lnprior(parsDic)
     inc = np.arccos(cosinc)
@@ -379,12 +392,14 @@ def lnprob_spherical_total_dpl(pars, returnType='lnprob', model=None):
         rst['chi2'] = np.inf
         rst['flux'] = None
         rst['rmsModel'] = None
+        rst['dh'] = None
         return rst[returnType]
 
     rst['lnprob'] = -0.5*chi2 + lnpriorValue
     rst['chi2'] = chi2
     rst['flux'] = JAM.flux
     rst['rmsModel'] = rmsModel
+    rst['dh'] = dh
     return rst[returnType]
 
 
