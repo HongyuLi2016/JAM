@@ -21,12 +21,12 @@ import sys
 # parameter boundaries. [lower, upper]
 boundary = {'cosinc': [0.0, 1.0], 'beta': [0.0, 0.4], 'logrho_s': [3.0, 10.0],
             'rs': [5.0, 45.0], 'gamma': [-1.6, 0.0], 'ml': [0.5, 15],
-            'logdelta': [-1.0, 1.0]
+            'logdelta': [-1.0, 1.0], 'q': [0.1, 0.999]
             }
 # parameter gaussian priors. [mean, sigma]
 prior = {'cosinc': [0.0, 1e4], 'beta': [0.0, 1e4], 'logrho_s': [5.0, 1e4],
          'rs': [10.0, 1e4], 'gamma': [-1.0, 1e4], 'ml': [1.0, 1e4],
-         'logdelta': [-1.0, 1e4]}
+         'logdelta': [-1.0, 1e4], 'q': [0.9, 1e4]}
 
 model = {'boundary': boundary, 'prior': prior}
 
@@ -381,6 +381,46 @@ def lnprob_spherical_total_dpl(pars, returnType='lnprob', model=None):
     Beta = np.zeros(model['lum2d'].shape[0]) + beta
     JAM = model['JAM']
     dh = util_dm.gnfw1d(10**logrho_s, rs, gamma)
+    dh_mge3d = dh.mge3d()
+    rmsModel = JAM.run(inc, Beta, ml=0.0, mge_dh=dh_mge3d)
+    chi2 = (((rmsModel[model['goodbins']] - model['rms'][model['goodbins']]) /
+             model['errRms'][model['goodbins']])**2).sum()
+    if np.isnan(chi2):
+        print('Warning - JAM return nan value, beta={:.2f} may not'
+              ' be correct'.format(beta))
+        rst['lnprob'] = -np.inf
+        rst['chi2'] = np.inf
+        rst['flux'] = None
+        rst['rmsModel'] = None
+        rst['dh'] = None
+        return rst[returnType]
+
+    rst['lnprob'] = -0.5*chi2 + lnpriorValue
+    rst['chi2'] = chi2
+    rst['flux'] = JAM.flux
+    rst['rmsModel'] = rmsModel
+    rst['dh'] = dh
+    return rst[returnType]
+
+
+def lnprob_oblate_total_dpl(pars, returnType='lnprob', model=None):
+    cosinc, beta, logrho_s, rs, gamma, q = pars
+    # print pars
+    parsDic = {'cosinc': cosinc, 'beta': beta, 'logrho_s': logrho_s,
+               'rs': rs, 'gamma': gamma, 'q': q}
+    rst = {}
+    if np.isinf(check_boundary(parsDic, boundary=model['boundary'])):
+        rst['lnprob'] = -np.inf
+        rst['chi2'] = np.inf
+        rst['flux'] = None
+        rst['rmsModel'] = None
+        rst['dh'] = None
+        return rst[returnType]
+    lnpriorValue = lnprior(parsDic, prior=model['prior'])
+    inc = np.arccos(cosinc)
+    Beta = np.zeros(model['lum2d'].shape[0]) + beta
+    JAM = model['JAM']
+    dh = util_dm.gnfw2d(10**logrho_s, rs, gamma, q)
     dh_mge3d = dh.mge3d()
     rmsModel = JAM.run(inc, Beta, ml=0.0, mge_dh=dh_mge3d)
     chi2 = (((rmsModel[model['goodbins']] - model['rms'][model['goodbins']]) /
@@ -794,6 +834,50 @@ class mcmc:
         model['type'] = 'spherical_total_dpl'
         model['ndim'] = 5
         model['JAMpars'] = ['cosinc', 'beta', 'logrho_s', 'rs', 'gamma']
+        # initialize the JAM class and pass to the global parameter
+        model['JAM'] = \
+            pyjam.axi_rms.jam(model['lum2d'], model['pot2d'],
+                              model['distance'],
+                              model['xbin'], model['ybin'], mbh=model['bh'],
+                              quiet=True, sigmapsf=model['sigmapsf'],
+                              pixsize=model['pixsize'], nrad=model['nrad'],
+                              shape=model['shape'])
+
+        printModelInfo(model)
+        printBoundaryPrior(model)
+        nwalkers = model['nwalkers']
+        threads = model['threads']
+        ndim = model['ndim']
+        JAMpars = model['JAMpars']
+        if model['p0'] == 'flat':
+            p0 = flat_initp(JAMpars, nwalkers)
+        elif model['p0'] == 'fit':
+            raise ValueError('Calculate maximum lnprob positon from '
+                             'optimisiztion - not implemented yet')
+        else:
+            raise ValueError('p0 must be flat or fit, {} is '
+                             'not supported'.format(model['p0']))
+        initSampler = \
+            emcee.EnsembleSampler(nwalkers, ndim, model['lnprob'],
+                                  kwargs={'model': model}, threads=threads)
+        sys.stdout.flush()
+        sampler = _runEmcee(initSampler, p0)
+        # pool.close()
+        print('--------------------------------------------------')
+        print('Finish! Total elapsed time: {:.2f}s'
+              .format(time()-self.startTime))
+        rst = analyzeRst(sampler, model)
+        sys.stdout.flush()
+        model['rst'] = rst
+        dump(model)
+
+    def oblate_total_dpl(self):
+        print('--------------------------------------------------')
+        print('oblate double power-law total mass model')
+        model['lnprob'] = lnprob_oblate_total_dpl
+        model['type'] = 'oblate_total_dpl'
+        model['ndim'] = 6
+        model['JAMpars'] = ['cosinc', 'beta', 'logrho_s', 'rs', 'gamma', 'q']
         # initialize the JAM class and pass to the global parameter
         model['JAM'] = \
             pyjam.axi_rms.jam(model['lum2d'], model['pot2d'],
