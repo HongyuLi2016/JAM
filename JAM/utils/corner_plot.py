@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from matplotlib import rc
 import util_fig
+from scipy.stats import gaussian_kde
 rc('mathtext', fontset='stix')
 sauron = util_fig.sauron
 ticks_font = util_fig.ticks_font
@@ -84,13 +85,16 @@ def hist2d(x, y, *args, **kwargs):
 
 def corner(xs, weights=None, labels=None, extents=None, truths=None,
            truth_color="r", scale_hist=False, quantiles=[], bins=30,
-           verbose=False, fig=None, **kwargs):
+           verbose=False, fig=None, resample=True, **kwargs):
     # hbins  bin number for 1D histgram
     clevel = kwargs.pop("clevel", [0.2, 0.3, 0.683, 0.864, 0.997])
     color = kwargs.pop("color", [0.8936, 0.6382, 0.5106, 0.1553, 0.01276])
     linewidths = kwargs.pop("linewidths", 0.8)
 
     xs = xs.T
+    if resample:
+        kde = gaussian_kde(xs)
+        xs = kde.resample(100000)
     K = len(xs)
     factor = 2.0           # size of one side of one panel
     lbdim = 0.5 * factor   # size of left/bottom margin
