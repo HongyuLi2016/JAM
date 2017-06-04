@@ -85,7 +85,8 @@ def hist2d(x, y, *args, **kwargs):
 
 def corner(xs, weights=None, labels=None, extents=None, truths=None,
            truth_color="r", scale_hist=False, quantiles=[], bins=30,
-           verbose=False, fig=None, resample=True, **kwargs):
+           verbose=False, fig=None, resample=True, sampleSize=100000,
+           smooth='scott', **kwargs):
     # hbins  bin number for 1D histgram
     clevel = kwargs.pop("clevel", [0.2, 0.3, 0.683, 0.864, 0.997])
     color = kwargs.pop("color", [0.8936, 0.6382, 0.5106, 0.1553, 0.01276])
@@ -93,8 +94,8 @@ def corner(xs, weights=None, labels=None, extents=None, truths=None,
 
     xs = xs.T
     if resample:
-        kde = gaussian_kde(xs)
-        xs = kde.resample(100000)
+        kde = gaussian_kde(xs, bw_method=smooth)
+        xs = kde.resample(sampleSize)
     K = len(xs)
     factor = 2.0           # size of one side of one panel
     lbdim = 0.5 * factor   # size of left/bottom margin
