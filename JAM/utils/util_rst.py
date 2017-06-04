@@ -230,6 +230,14 @@ class modelRst(object):
             dh = JAMlnprob(bestPars, model=self.data, returnType='dh')
             dh_mge3d = dh.mge3d()
             self.DmMge = util_mge.mge(dh.mge2d(), inc=self.inc)
+        elif self.data['type'] == 'oblate_total_dpl':
+            self.labels = [r'$\mathbf{cosi}$', r'$\mathbf{\beta}$',
+                           r'$\mathbf{log\ \rho_s}$', r'$\mathbf{r_s}$',
+                           r'$\mathbf{\gamma}$', r'$\mathbf{q}$']
+            # create dark halo mass mge object
+            dh = JAMlnprob(bestPars, model=self.data, returnType='dh')
+            dh_mge3d = dh.mge3d()
+            self.DmMge = util_mge.mge(dh.mge2d(self.inc), inc=self.inc)
         else:
             raise ValueError('model type {} not supported'
                              .format(self.data['type']))
