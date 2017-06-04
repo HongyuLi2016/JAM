@@ -7,6 +7,7 @@ import util_dm
 import matplotlib.pyplot as plt
 import util_fig
 from util_rst import modelRst
+from scipy import interpolate
 import pickle
 ticks_font = util_fig.ticks_font
 text_font = util_fig.text_font
@@ -43,7 +44,7 @@ class profile(modelRst):
         self.profiles['r'] = r
         # select a subchain to calculate density profile
         ntotal = self.flatchain.shape[0]
-        step = ntotal / nlines
+        step = ntotal // nlines
         if step == 0:
             print('Warning - nlines > total number of samples')
             step = 1
@@ -51,31 +52,38 @@ class profile(modelRst):
         ii[::step] = True
         self.profiles['nprofiles'] = ii.sum()
 
-        stellarProfiles = np.zeros([len(r), ii.sum(), 2])
-        mls = self.flatchain[ii, 2].ravel()
         if self.data['type'] in ['spherical_gNFW', 'spherical_gNFW_gas']:
             # Calculate stellar mass profiles
+            stellarProfiles = np.zeros([len(r), ii.sum(), 2])
+            inc = np.arccos(self.flatchain[ii, 0].ravel())
+            mls = self.flatchain[ii, 2].ravel()
             mass, density = _extractProfile(self.LmMge, r)
             for i in range(ii.sum()):
                 stellarProfiles[:, i, 0] = mls[i] * density
                 stellarProfiles[:, i, 1] = mls[i] * mass
             self.profiles['stellar'] = stellarProfiles
             # Calculate dark matter profiles
-            if self.DmMge is None:
-                self.profiles['dark'] = None
-            else:
-                darkProfiles = np.zeros_like(stellarProfiles)
-                logrho_s = self.flatchain[ii, 3].ravel()
-                rs = self.flatchain[ii, 4].ravel()
-                gamma = self.flatchain[ii, 5].ravel()
-                for i in range(ii.sum()):
-                    tem_dh = util_dm.gnfw1d(10**logrho_s[i], rs[i], gamma[i])
-                    darkProfiles[:, i, 0] = tem_dh.densityProfile(r)
-                    for j in range(len(r)):
-                        darkProfiles[j, i, 1] = tem_dh.enclosedMass(r[j])
-                self.profiles['dark'] = darkProfiles
+            # if self.DmMge is None:
+            #     raise ValueError('No dark matter halo is found')
+            darkProfiles = np.zeros_like(stellarProfiles)
+            logrho_s = self.flatchain[ii, 3].ravel()
+            rs = self.flatchain[ii, 4].ravel()
+            gamma = self.flatchain[ii, 5].ravel()
+            for i in range(ii.sum()):
+                tem_dh = util_dm.gnfw1d(10**logrho_s[i], rs[i], gamma[i])
+                tem_mge = util_mge.mge(tem_dh.mge2d(), inc=inc[i])
+                mass, density = _extractProfile(tem_mge, r)
+                darkProfiles[:, i, 0] = density
+                darkProfiles[:, i, 1] = mass
+            self.profiles['dark'] = darkProfiles
+            totalProfiles = stellarProfiles + darkProfiles
+            self.profiles['total'] = totalProfiles
+
         elif self.data['type'] == 'spherical_gNFW_gradient':
             # Calculate stellar mass profiles
+            stellarProfiles = np.zeros([len(r), ii.sum(), 2])
+            inc = np.arccos(self.flatchain[ii, 0].ravel())
+            mls = self.flatchain[ii, 2].ravel()
             pot_ng = self.pot2d.copy()
             pot_tem = np.zeros([1, 3])
             sigma = pot_ng[:, 1]/self.data['Re_arcsec']
@@ -95,109 +103,113 @@ class profile(modelRst):
             self.profiles['stellar'] = stellarProfiles
 
             # Calculate dark matter profiles
-            if self.DmMge is None:
-                self.profiles['dark'] = None
-            else:
-                darkProfiles = np.zeros_like(stellarProfiles)
-                logrho_s = self.flatchain[ii, 4].ravel()
-                rs = self.flatchain[ii, 5].ravel()
-                gamma = self.flatchain[ii, 6].ravel()
-                for i in range(ii.sum()):
-                    tem_dh = util_dm.gnfw1d(10**logrho_s[i], rs[i], gamma[i])
-                    darkProfiles[:, i, 0] = tem_dh.densityProfile(r)
-                    for j in range(len(r)):
-                        darkProfiles[j, i, 1] = tem_dh.enclosedMass(r[j])
-                self.profiles['dark'] = darkProfiles
+            darkProfiles = np.zeros_like(stellarProfiles)
+            logrho_s = self.flatchain[ii, 4].ravel()
+            rs = self.flatchain[ii, 5].ravel()
+            gamma = self.flatchain[ii, 6].ravel()
+            for i in range(ii.sum()):
+                tem_dh = util_dm.gnfw1d(10**logrho_s[i], rs[i], gamma[i])
+                tem_mge = util_mge.mge(tem_dh.mge2d(), inc=inc[i])
+                mass, density = _extractProfile(tem_mge, r)
+                darkProfiles[:, i, 0] = density
+                darkProfiles[:, i, 1] = mass
+            self.profiles['dark'] = darkProfiles
+            totalProfiles = stellarProfiles + darkProfiles
+            self.profiles['total'] = totalProfiles
+
+        elif self.data['type'] == 'spherical_total_dpl':
+            self.profiles['stellar'] = None
+            self.profiles['dark'] = None
+            totalProfiles = np.zeros([len(r), ii.sum(), 2])
+            inc = np.arccos(self.flatchain[ii, 0].ravel())
+            logrho_s = self.flatchain[ii, 2].ravel()
+            rs = self.flatchain[ii, 3].ravel()
+            gamma = self.flatchain[ii, 4].ravel()
+            for i in range(ii.sum()):
+                tem_dh = util_dm.gnfw1d(10**logrho_s[i], rs[i], gamma[i])
+                tem_mge = util_mge.mge(tem_dh.mge2d(), inc=inc[i])
+                mass, density = _extractProfile(tem_mge, r)
+                totalProfiles[:, i, 0] = density
+                totalProfiles[:, i, 1] = mass
+            self.profiles['total'] = totalProfiles
+
+        elif self.data['type'] == 'oblate_total_dpl':
+            self.profiles['stellar'] = None
+            self.profiles['dark'] = None
+            totalProfiles = np.zeros([len(r), ii.sum(), 2])
+            inc = np.arccos(self.flatchain[ii, 0].ravel())
+            logrho_s = self.flatchain[ii, 2].ravel()
+            rs = self.flatchain[ii, 3].ravel()
+            gamma = self.flatchain[ii, 4].ravel()
+            q = self.flatchain[ii, 5].ravel()
+            for i in range(ii.sum()):
+                tem_dh = util_dm.gnfw2d(10**logrho_s[i], rs[i], gamma[i], q[i])
+                tem_mge = util_mge.mge(tem_dh.mge2d(inc[i]), inc=inc[i])
+                mass, density = _extractProfile(tem_mge, r)
+                totalProfiles[:, i, 0] = density
+                totalProfiles[:, i, 1] = mass
+            self.profiles['total'] = totalProfiles
         else:
             raise ValueError('model type {} not supported'
                              .format(self.data['type']))
 
-        # calculate total profiles
-        totalProfiles = stellarProfiles.copy()
-        if self.profiles['dark'] is not None:
-            totalProfiles += self.profiles['dark']
+        # add black hole mass
         if self.data['bh'] is not None:
-            totalProfiles[:, :, 1] += self.data['bh']  # add black hole mass
-        self.profiles['total'] = totalProfiles
+            self.profiles['total'][:, :, 1] += self.data['bh']
+
+        # add gas component
         self.gas3d = self.data.get('gas3d', None)
+
+        # calculate mass within Re
         Re_kpc = self.data['Re_arcsec'] * self.pc / 1e3
+        stellar_Re, dark_Re, total_Re, fdm_Re = self.enclosed3DMass(Re_kpc)
         MassRe = {}
-        MassRe['stellar'] = \
-            np.log10(self.enclosed3DStellarMass(Re_kpc)[0])
-        MassRe['dark'] = self.enclosed3DdarkMass(Re_kpc)
-        MassRe['total'] = np.log10(self.enclosed3DTotalMass(Re_kpc)[0])
-        if MassRe['dark'] is not None:
-            MassRe['dark'] = np.log10(MassRe['dark'][0])
-            MassRe['fdm'] = 10**(MassRe['dark']-MassRe['total'])
-        else:
-            MassRe['fdm'] = None
+        MassRe['Re_kpc'] = Re_kpc
+        MassRe['stellar'] = np.log10(stellar_Re)
+        MassRe['dark'] = np.log10(dark_Re)
+        MassRe['total'] = np.log10(total_Re)
+        MassRe['fdm'] = fdm_Re
         self.profiles['MassRe'] = MassRe
 
     def save(self, fname='profiles.dat', outpath='.'):
         with open('{}/{}'.format(outpath, fname), 'wb') as f:
             pickle.dump(self.profiles, f)
 
-    def enclosed2DStellarMass(self, R):
-        '''
-        R in Kpc, could be a 1D array
-        '''
-        R = np.atleast_1d(R) * 1e3
-        mass = np.zeros_like(R)
-        for i in range(len(R)):
-            mass[i] = self.LmMge.enclosed2Dluminosity(R[i])
-        return self.ml * mass
-
-    def enclosed3DStellarMass(self, r):
-        '''
-        r in Kpc, could be a 1D array
-        '''
-        r = np.atleast_1d(r) * 1e3
-        mass = np.zeros_like(r)
-        for i in range(len(r)):
-            mass[i] = self.LmMge.enclosed3Dluminosity(r[i])
-        return self.ml * mass
-
-    def enclosed2DdarkMass(self, R):
-        if self.DmMge is not None:
-            R = np.atleast_1d(R) * 1e3
-            mass = np.zeros_like(R)
-            for i in range(len(R)):
-                mass[i] = self.DmMge.enclosed2Dluminosity(R[i])
-            return mass
+    def enclosed3DMass(self, r):
+        if self.profiles['total'] is not None:
+            total_median = np.percentile(self.profiles['total'][:, :, 1],
+                                         50, axis=1)
+            ftotal = \
+                interpolate.interp1d(self.profiles['r'], total_median,
+                                     kind='linear', bounds_error=False,
+                                     fill_value=np.nan)
+            total = ftotal(r)
         else:
-            print('No dark matter halo in current model')
-            return None
+            total = np.nan
 
-    def enclosed3DdarkMass(self, r):
-        '''
-        r in Kpc, could be a 1D array
-        '''
-        r = np.atleast_1d(r) * 1e3
-        if self.DmMge is not None:
-            mass = np.zeros_like(r)
-            for i in range(len(r)):
-                mass[i] = self.DmMge.enclosed3Dluminosity(r[i])
-            return mass
+        if self.profiles['stellar'] is not None:
+            stellar_median = np.percentile(self.profiles['stellar'][:, :, 1],
+                                           50, axis=1)
+            fstellar = \
+                interpolate.interp1d(self.profiles['r'], stellar_median,
+                                     kind='linear', bounds_error=False,
+                                     fill_value=np.nan)
+            stellar = fstellar(r)
         else:
-            print('No dark matter halo in current model')
-            return None
+            stellar = np.nan
 
-    def enclosed2DTotalMass(self, R):
-        R = np.atleast_1d(R) * 1e3
-        mass = self.enclosed2DStellarMass(R)
-        if self.DmMge is not None:
-            mass += self.enclosed2DdarkMass(R)
-        if self.data['bh'] is not None:
-            mass += self.data['bh']
-        return mass
-
-    def enclosed3DTotalMass(self, r):
-        mass = self.enclosed3DStellarMass(r)
-        if self.DmMge is not None:
-            mass += self.enclosed3DdarkMass(r)
-        if self.data['bh'] is not None:
-            mass += self.data['bh']
-        return mass
+        if self.profiles['dark'] is not None:
+            dark_median = np.percentile(self.profiles['dark'][:, :, 1],
+                                        50, axis=1)
+            fdark = \
+                interpolate.interp1d(self.profiles['r'], dark_median,
+                                     kind='linear', bounds_error=False,
+                                     fill_value=np.nan)
+            dark = fdark(r)
+        else:
+            dark = np.nan
+        fdm = dark / total
+        return stellar, dark, total, fdm
 
     def plotProfiles(self, outpath='.', figname='profiles.png', Range=None,
                      true=None, nre=3.5, **kwargs):
@@ -214,19 +226,22 @@ class profile(modelRst):
         ii = (r > Range[0]) * (r < Range[1])
         logr = np.log10(r[ii])
         # plot stellar density
-        stellarDens = np.log10(self.profiles['stellar'][ii, :, 0])
-        stellarMass = np.log10(self.profiles['stellar'][ii, :, 1])
-        axes[0].plot(logr, stellarDens, 'y', alpha=0.1, **kwargs)
-        axes[1].plot(logr, stellarMass, 'y', alpha=0.1, **kwargs)
-        # plot dark density and total density
+        if self.profiles['stellar'] is not None:
+            stellarDens = np.log10(self.profiles['stellar'][ii, :, 0])
+            stellarMass = np.log10(self.profiles['stellar'][ii, :, 1])
+            axes[0].plot(logr, stellarDens, 'y', alpha=0.1, **kwargs)
+            axes[1].plot(logr, stellarMass, 'y', alpha=0.1, **kwargs)
+        # plot dark density
         if self.profiles['dark'] is not None:
             darkDens = np.log10(self.profiles['dark'][ii, :, 0])
-            totalDens = np.log10(self.profiles['total'][ii, :, 0])
             darkMass = np.log10(self.profiles['dark'][ii, :, 1])
-            totalMass = np.log10(self.profiles['total'][ii, :, 1])
             axes[0].plot(logr, darkDens, 'r', alpha=0.1, **kwargs)
-            axes[0].plot(logr, totalDens, 'c', alpha=0.1, **kwargs)
             axes[1].plot(logr, darkMass, 'r', alpha=0.1, **kwargs)
+        # plot total density
+        if self.profiles['total'] is not None:
+            totalDens = np.log10(self.profiles['total'][ii, :, 0])
+            totalMass = np.log10(self.profiles['total'][ii, :, 1])
+            axes[0].plot(logr, totalDens, 'c', alpha=0.1, **kwargs)
             axes[1].plot(logr, totalMass, 'c', alpha=0.1, **kwargs)
         # axes[1].plot(np.log10(Re_kpc), MassRe['total'], 'ok')
         # axes[1].plot(np.log10(Re_kpc), MassRe['stellar'], 'oy')
@@ -240,6 +255,7 @@ class profile(modelRst):
         axes[0].set_ylabel(r'$\mathbf{log_{10}\ \ \! \rho \,'
                            ' \ [M_{\odot}\ \ \! kpc^{-3}]}$',
                            fontproperties=label_font)
+        # plot gas density
         if self.gas3d is not None:
             gas2d = util_mge.projection(self.gas3d, self.inc)
             GasMge = util_mge.mge(gas2d, self.inc)
@@ -256,9 +272,11 @@ class profile(modelRst):
                 raise RuntimeError('r must be provided for true profile')
             ii = (rtrue > Range[0]) * (rtrue < Range[1])
             if 'stellarDens' in true.keys():
-                axes[0].plot(np.log10(rtrue[ii]), true['stellarDens'][ii], 'oy')
+                axes[0].plot(np.log10(rtrue[ii]), true['stellarDens'][ii],
+                             'oy')
             if 'stellarMass' in true.keys():
-                axes[1].plot(np.log10(rtrue[ii]), true['stellarMass'][ii], 'oy')
+                axes[1].plot(np.log10(rtrue[ii]), true['stellarMass'][ii],
+                             'oy')
             if 'darkDens' in true.keys():
                 axes[0].plot(np.log10(rtrue[ii]), true['darkDens'][ii], 'or')
             if 'darkMass' in true.keys():
