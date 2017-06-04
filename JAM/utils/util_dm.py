@@ -7,7 +7,7 @@ FOUR_PI = 4.0 * np.pi
 SQRT_TOW_PI = np.sqrt(2.0*np.pi)
 
 
-def _mge1dfit(r, rho, **kwargs):
+def _mge1dfit(r, rho, q=0.999, **kwargs):
     '''
     fit a 1D profile (e.g. a spherical dark halo) with MGEs and return the
       3D-deprojected mge coefficients
@@ -23,7 +23,7 @@ def _mge1dfit(r, rho, **kwargs):
     mge3d = np.zeros([mge.shape[0], 3])
     mge3d[:, 0] = mge[:, 0]/SQRT_TOW_PI/mge[:, 1]
     mge3d[:, 1] = mge[:, 1]
-    mge3d[:, 2] = 0.999
+    mge3d[:, 2] = q
     return mge3d
 
 
@@ -81,6 +81,71 @@ class gnfw1d:
                            imax=imax, npoints=npoints)
         mge3d[:, 0] *= mge3d[:, 1]*SQRT_TOW_PI
         return mge3d
+
+
+class gnfw2d:
+    def __init__(self, rho_s, rs, gamma, q):
+        '''
+        unit:
+          rho_s [M_solar/kpc^3]
+          rs [kpc]
+          gamma [none], usually between [-2.0, 0], for NFW, gamma = -1.0
+          q [none], intrinsic axis ratio
+        '''
+        self.rho_s = rho_s
+        self.rs = rs
+        self.gamma = gamma
+        self.q = q
+
+    def densityProfile(self, R, z):
+        '''
+        Return the density values at given (R, z)
+        (R, z) [kpc]
+        densityProfile [M_solar/kpc^3]
+        '''
+        m = np.sqrt(R**2 + (z/self.q)**2)
+        rdivrs = m / self.rs
+        return self.rho_s*rdivrs**self.gamma *\
+            (0.5+0.5*rdivrs)**(-self.gamma-3)
+
+    def enclosedMass(self, R, **kwargs):
+        '''
+        Return the enlosed mass within R
+        R [kpc]
+        enclosedMass [M_solar]
+        '''
+        print('Not implemented yet')
+        return None
+
+    def mge3d(self, rrange=[0.1, 200], ngauss=10, imax=5, npoints=200):
+        '''
+        rrange [kpc]
+        mge3d [M_solar/pc^3]  [pc]  [none]
+        '''
+        m = np.logspace(np.log10(rrange[0]), np.log10(rrange[1]), npoints)
+        rho = self.densityProfile(m, 0)
+        return _mge1dfit(m*1e3, rho/1e9, q=self.q, imax=imax, ngauss=ngauss)
+
+    def mge2d(self, inc, rrange=[0.1, 200], ngauss=10, imax=5,
+              npoints=200):
+        '''
+        fit this halo profile using MGE method and return the MGE coefficents
+        rrange [kpc], within which profile is fitted.
+        inc: inclination in radians
+        mge2d [M_solar/pc^2]  [pc]  [none]
+        '''
+        mge3d = self.mge3d(rrange=rrange, ngauss=ngauss,
+                           imax=imax, npoints=npoints)
+        dens = mge3d[:, 0]
+        sigma3d = mge3d[:, 1]
+        qint = mge3d[:, 2]
+
+        mge2d = mge3d.copy()
+        qobs = np.sqrt(qint**2 * np.sin(inc)**2 + np.cos(inc)**2)
+        surf = dens * qint / qobs * (SQRT_TOW_PI * sigma3d)
+        mge2d[:, 0] = surf
+        mge2d[:, 2] = qobs
+        return mge2d
 
 
 # do not use this
