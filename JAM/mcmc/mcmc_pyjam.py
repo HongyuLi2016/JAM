@@ -31,7 +31,7 @@ prior = {'cosinc': [0.0, 1e4], 'beta': [0.0, 1e4], 'logrho_s': [5.0, 1e4],
 model = {'boundary': boundary, 'prior': prior}
 
 
-def check_boundary(parsDic):
+def check_boundary(parsDic, boundary=None):
     '''
     Check whether parameters are within the boundary limits
     input
@@ -47,7 +47,7 @@ def check_boundary(parsDic):
     return 0.0
 
 
-def lnprior(parsDic):
+def lnprior(parsDic, prior=None):
     '''
     Calculate the gaussian prior lnprob
     input
@@ -76,7 +76,7 @@ def flat_initp(keys, nwalkers):
     return p0
 
 
-def analyzeRst(sampler, nburnin=0):
+def analyzeRst(sampler, model, nburnin=0):
     '''
     analyze the mcmc and generage resutls
       chain: (nwalker, nstep, ndim)
@@ -124,7 +124,7 @@ def analyzeRst(sampler, nburnin=0):
     return rst
 
 
-def dump():
+def dump(model):
     with open('{}/{}'.format(model['outfolder'], model['fname']), 'wb') as f:
         pickle.dump(model, f)
 
@@ -208,14 +208,14 @@ def lnprob_massFollowLight(pars, returnType='lnprob', model=None):
     # print pars
     parsDic = {'cosinc': cosinc, 'beta': beta, 'ml': ml}
     rst = {}
-    if np.isinf(check_boundary(parsDic)):
+    if np.isinf(check_boundary(parsDic, boundary=model['boundary'])):
         rst['lnprob'] = -np.inf
         rst['chi2'] = np.inf
         rst['flux'] = None
         rst['rmsModel'] = None
         rst['dh'] = None
         return rst[returnType]
-    lnpriorValue = lnprior(parsDic)
+    lnpriorValue = lnprior(parsDic, prior=model['prior'])
     inc = np.arccos(cosinc)
     Beta = np.zeros(model['lum2d'].shape[0]) + beta
     JAM = model['JAM']
@@ -246,14 +246,14 @@ def lnprob_spherical_gNFW(pars, returnType='lnprob', model=None):
     parsDic = {'cosinc': cosinc, 'beta': beta, 'ml': ml,
                'logrho_s': logrho_s, 'rs': rs, 'gamma': gamma}
     rst = {}
-    if np.isinf(check_boundary(parsDic)):
+    if np.isinf(check_boundary(parsDic, boundary=model['boundary'])):
         rst['lnprob'] = -np.inf
         rst['chi2'] = np.inf
         rst['flux'] = None
         rst['rmsModel'] = None
         rst['dh'] = None
         return rst[returnType]
-    lnpriorValue = lnprior(parsDic)
+    lnpriorValue = lnprior(parsDic, prior=model['prior'])
     inc = np.arccos(cosinc)
     Beta = np.zeros(model['lum2d'].shape[0]) + beta
     JAM = model['JAM']
@@ -286,14 +286,14 @@ def lnprob_spherical_gNFW_gradient(pars, returnType='lnprob', model=None):
     parsDic = {'cosinc': cosinc, 'beta': beta, 'ml': ml, 'logdelta': logdelta,
                'logrho_s': logrho_s, 'rs': rs, 'gamma': gamma}
     rst = {}
-    if np.isinf(check_boundary(parsDic)):
+    if np.isinf(check_boundary(parsDic, boundary=model['boundary'])):
         rst['lnprob'] = -np.inf
         rst['chi2'] = np.inf
         rst['flux'] = None
         rst['rmsModel'] = None
         rst['dh'] = None
         return rst[returnType]
-    lnpriorValue = lnprior(parsDic)
+    lnpriorValue = lnprior(parsDic, prior=model['prior'])
     inc = np.arccos(cosinc)
     Beta = np.zeros(model['lum2d'].shape[0]) + beta
     sigma = model['pot2d'][:, 1] / model['Re_arcsec']
@@ -328,14 +328,14 @@ def lnprob_spherical_gNFW_gas(pars, returnType='lnprob', model=None):
     parsDic = {'cosinc': cosinc, 'beta': beta, 'ml': ml,
                'logrho_s': logrho_s, 'rs': rs, 'gamma': gamma}
     rst = {}
-    if np.isinf(check_boundary(parsDic)):
+    if np.isinf(check_boundary(parsDic, boundary=model['boundary'])):
         rst['lnprob'] = -np.inf
         rst['chi2'] = np.inf
         rst['flux'] = None
         rst['rmsModel'] = None
         rst['dh'] = None
         return rst[returnType]
-    lnpriorValue = lnprior(parsDic)
+    lnpriorValue = lnprior(parsDic, prior=model['prior'])
     inc = np.arccos(cosinc)
     Beta = np.zeros(model['lum2d'].shape[0]) + beta
     JAM = model['JAM']
@@ -369,14 +369,14 @@ def lnprob_spherical_total_dpl(pars, returnType='lnprob', model=None):
     parsDic = {'cosinc': cosinc, 'beta': beta,
                'logrho_s': logrho_s, 'rs': rs, 'gamma': gamma}
     rst = {}
-    if np.isinf(check_boundary(parsDic)):
+    if np.isinf(check_boundary(parsDic, boundary=model['boundary'])):
         rst['lnprob'] = -np.inf
         rst['chi2'] = np.inf
         rst['flux'] = None
         rst['rmsModel'] = None
         rst['dh'] = None
         return rst[returnType]
-    lnpriorValue = lnprior(parsDic)
+    lnpriorValue = lnprior(parsDic, prior=model['prior'])
     inc = np.arccos(cosinc)
     Beta = np.zeros(model['lum2d'].shape[0]) + beta
     JAM = model['JAM']
@@ -643,10 +643,10 @@ class mcmc:
         print('--------------------------------------------------')
         print('Finish! Total elapsed time: {:.2f}s'
               .format(time()-self.startTime))
-        rst = analyzeRst(sampler)
+        rst = analyzeRst(sampler, model)
         sys.stdout.flush()
         model['rst'] = rst
-        dump()
+        dump(model)
 
     def spherical_gNFW(self):
         print('--------------------------------------------------')
@@ -687,10 +687,10 @@ class mcmc:
         print('--------------------------------------------------')
         print('Finish! Total elapsed time: {:.2f}s'
               .format(time()-self.startTime))
-        rst = analyzeRst(sampler)
+        rst = analyzeRst(sampler, model)
         sys.stdout.flush()
         model['rst'] = rst
-        dump()
+        dump(model)
 
     def spherical_gNFW_gradient(self):
         print('--------------------------------------------------')
@@ -732,10 +732,10 @@ class mcmc:
         print('--------------------------------------------------')
         print('Finish! Total elapsed time: {:.2f}s'
               .format(time()-self.startTime))
-        rst = analyzeRst(sampler)
+        rst = analyzeRst(sampler, model)
         sys.stdout.flush()
         model['rst'] = rst
-        dump()
+        dump(model)
 
     def spherical_gNFW_gas(self):
         print('--------------------------------------------------')
@@ -782,10 +782,10 @@ class mcmc:
         print('--------------------------------------------------')
         print('Finish! Total elapsed time: {:.2f}s'
               .format(time()-self.startTime))
-        rst = analyzeRst(sampler)
+        rst = analyzeRst(sampler, model)
         sys.stdout.flush()
         model['rst'] = rst
-        dump()
+        dump(model)
 
     def spherical_total_dpl(self):
         print('--------------------------------------------------')
@@ -826,10 +826,10 @@ class mcmc:
         print('--------------------------------------------------')
         print('Finish! Total elapsed time: {:.2f}s'
               .format(time()-self.startTime))
-        rst = analyzeRst(sampler)
+        rst = analyzeRst(sampler, model)
         sys.stdout.flush()
         model['rst'] = rst
-        dump()
+        dump(model)
 
     def chi2_spherical_gNFW(self, p0=None, options=None, method='Nelder-Mead'):
         print('--------------------------------------------------')
