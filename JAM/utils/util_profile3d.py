@@ -273,18 +273,22 @@ class profile(modelRst):
             ii = (rtrue > Range[0]) * (rtrue < Range[1])
             if 'stellarDens' in true.keys():
                 axes[0].plot(np.log10(rtrue[ii]), true['stellarDens'][ii],
-                             'oy')
+                             'oy', markeredgecolor='k')
             if 'stellarMass' in true.keys():
                 axes[1].plot(np.log10(rtrue[ii]), true['stellarMass'][ii],
-                             'oy')
+                             'oy', markeredgecolor='k')
             if 'darkDens' in true.keys():
-                axes[0].plot(np.log10(rtrue[ii]), true['darkDens'][ii], 'or')
+                axes[0].plot(np.log10(rtrue[ii]), true['darkDens'][ii], 'or',
+                             markeredgecolor='k')
             if 'darkMass' in true.keys():
-                axes[1].plot(np.log10(rtrue[ii]), true['darkMass'][ii], 'or')
+                axes[1].plot(np.log10(rtrue[ii]), true['darkMass'][ii], 'or',
+                             markeredgecolor='k')
             if 'totalDens' in true.keys():
-                axes[0].plot(np.log10(rtrue[ii]), true['totalDens'][ii], 'oc')
+                axes[0].plot(np.log10(rtrue[ii]), true['totalDens'][ii], 'oc',
+                             markeredgecolor='k')
             if 'totalMass' in true.keys():
-                axes[1].plot(np.log10(rtrue[ii]), true['totalMass'][ii], 'oc')
+                axes[1].plot(np.log10(rtrue[ii]), true['totalMass'][ii], 'oc',
+                             markeredgecolor='k')
         for ax in axes:
             ax.set_xlim([np.min(logr), np.max(logr)])
             ax.axvline(np.log10(Re_kpc), ls="dashed", color='b', linewidth=2)
