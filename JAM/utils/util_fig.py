@@ -131,6 +131,9 @@ def add_colorbar(ax, cmap, norm, width=0.02, position='right',
         axc = fig.add_axes([pos.x0, pos.y1, pos.width, width])
         colorbar.ColorbarBase(axc, orientation='horizontal',
                               norm=norm, cmap=cmap)
+        for tick in axc.xaxis.get_major_ticks():
+            tick.label1On = False
+            tick.label2On = True
         if cmax is not None:
             axc.xaxis.set_major_locator(MaxNLocator(cmax))
     elif position == 'bottom':
