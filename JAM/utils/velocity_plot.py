@@ -47,8 +47,8 @@ def lhy_map(ax, x, y, vel, vmin=None, vmax=None,
 
 def velocity_plot(x0, y0, v, ax=None, cmap=sauron, norm=None,
                   equal=True, text=None, bar=True, fig=None,
-                  barlabel='$\mathbf{km/s}$', shape='C',
-                  vmap='map', size=0.24, ncolors=64,
+                  barlabel='$\mathbf{km/s}$', barlabelSize='x-small',
+                  shape='C', vmap='map', size=0.24, ncolors=64,
                   markersize=1.5, xreverse=True):
     if ax is None:
         ax = plt.gca()
@@ -82,4 +82,4 @@ def velocity_plot(x0, y0, v, ax=None, cmap=sauron, norm=None,
 
     if bar is True:
         util_fig.add_colorbar(ax, sauron, norm, position='right',
-                              barlabel=barlabel)
+                              barlabel=barlabel, barlabelSize=barlabelSize)
