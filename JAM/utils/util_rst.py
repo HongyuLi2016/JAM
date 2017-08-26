@@ -143,10 +143,15 @@ class modelRst(object):
         # model inclination
         cosinc = self.bestPars.get('cosinc', np.pi/2.0)
         self.inc = np.arccos(cosinc)
-        if 'ml' not in self.bestPars.keys():
-            print('Waring - do not find ml parameter, set to 1.0')
+        if 'ml' in self.bestPars.keys():
+            self.ml = self.bestPars['ml']
+        else:
+            if 'logml' in self.bestPars.keys():
+                self.ml = 10**self.bestPars['logml']
+            else:
+                print('Waring - do not find ml parameter, set to 1.0')
+                self.ml = 1.0
 
-        self.ml = self.bestPars.get('ml', 1.0)
         # load observational data
         self.dist = self.data['distance']
         self.pc = self.dist * np.pi / 0.648
@@ -189,6 +194,14 @@ class modelRst(object):
         elif self.data['type'] == 'spherical_gNFW':
             self.labels = [r'$\mathbf{cosi}$', r'$\mathbf{\beta}$',
                            r'$\mathbf{M^*/L}$', r'$\mathbf{log\ \rho_s}$',
+                           r'$\mathbf{r_s}$', r'$\mathbf{\gamma}$']
+            # create dark halo mass mge object
+            dh = JAMlnprob(bestPars, model=self.data, returnType='dh')
+            dh_mge3d = dh.mge3d()
+            self.DmMge = util_mge.mge(dh.mge2d(), inc=self.inc)
+        elif self.data['type'] == 'spherical_gNFW_logml':
+            self.labels = [r'$\mathbf{cosi}$', r'$\mathbf{\beta}$',
+                           r'$\mathbf{logM^*/L}$', r'$\mathbf{log\ \rho_s}$',
                            r'$\mathbf{r_s}$', r'$\mathbf{\gamma}$']
             # create dark halo mass mge object
             dh = JAMlnprob(bestPars, model=self.data, returnType='dh')

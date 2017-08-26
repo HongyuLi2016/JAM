@@ -52,11 +52,15 @@ class profile(modelRst):
         ii[::step] = True
         self.profiles['nprofiles'] = ii.sum()
 
-        if self.data['type'] in ['spherical_gNFW', 'spherical_gNFW_gas']:
+        if self.data['type'] in ['spherical_gNFW', 'spherical_gNFW_logml',
+                                 'spherical_gNFW_gas']:
             # Calculate stellar mass profiles
             stellarProfiles = np.zeros([len(r), ii.sum(), 2])
             inc = np.arccos(self.flatchain[ii, 0].ravel())
-            mls = self.flatchain[ii, 2].ravel()
+            if self.data['type'] == 'spherical_gNFW_logml':
+                mls = 10**self.flatchain[ii, 2].ravel()
+            else:
+                mls = self.flatchain[ii, 2].ravel()
             mass, density = _extractProfile(self.LmMge, r)
             for i in range(ii.sum()):
                 stellarProfiles[:, i, 0] = mls[i] * density
