@@ -1,4 +1,10 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# File              : mcmc_pyjam.py
+# Author            : Hongyu Li <lhy88562189@gmail.com>
+# Date              : 06.09.2017
+# Last Modified Date: 06.09.2017
+# Last Modified By  : Hongyu Li <lhy88562189@gmail.com>
 import numpy as np
 import emcee
 from scipy.optimize import minimize

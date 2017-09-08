@@ -1,4 +1,10 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# File              : mge_example.py
+# Author            : Hongyu Li <lhy88562189@gmail.com>
+# Date              : 07.09.2017
+# Last Modified Date: 07.09.2017
+# Last Modified By  : Hongyu Li <lhy88562189@gmail.com>
 import numpy as np
 from contex import JAM
 import JAM.utils.util_dm as udm  # import dark matter utility class
@@ -23,7 +29,7 @@ mge2d = gnfw_dh.mge2d()  # fit the density profile using MGE
 mge = umge.mge(mge2d, np.pi/2.0, shape='oblate')
 print('--------------------')
 print('Enclosed Mass within 10kpc (gNFW profile): {:.3e}'
-      .format(gnfw_dh.enclosedMass(10.0)))
+      .format(gnfw_dh.enclosedMass(1.0)))
 print('Enclosed Mass within 10kpc (MGE approximation): {:.3e}'
       .format(mge.enclosed3Dluminosity(10.0*1e3)[0]))
 # here are some unit conversion
