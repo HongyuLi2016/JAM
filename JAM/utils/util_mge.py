@@ -1,3 +1,10 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# File              : util_mge.py
+# Author            : Hongyu Li <lhy88562189@gmail.com>
+# Date              : 10.09.2017
+# Last Modified Date: 10.09.2017
+# Last Modified By  : Hongyu Li <lhy88562189@gmail.com>
 import numpy as np
 from scipy.integrate import quad, dblquad
 from scipy.misc import derivative
@@ -211,7 +218,7 @@ class mge:
                                         (R**2 + (z/mge3d[i, 2])**2))
         return rst
 
-    def meanDensity_inte(self, r):
+    def meanDensity(self, r):
         '''
         Return the mean density at give spherical radius r
         r in pc, density in L_solar/pc^3
@@ -225,7 +232,7 @@ class mge:
         density = self.luminosityDensity(R, z)
         return np.average(density, axis=1)
 
-    def meanDensity(self, r):
+    def meanDensity_cir(self, r):
         '''
         Return the mean density at give spherical radius r
         r in pc, density in L_solar/pc^3
