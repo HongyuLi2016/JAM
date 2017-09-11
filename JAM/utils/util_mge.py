@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# File              : util_mge.py
+# File              : JAM/utils/util_mge.py
 # Author            : Hongyu Li <lhy88562189@gmail.com>
 # Date              : 10.09.2017
-# Last Modified Date: 10.09.2017
+# Last Modified Date: 11.09.2017
 # Last Modified By  : Hongyu Li <lhy88562189@gmail.com>
 import numpy as np
 from scipy.integrate import quad, dblquad
@@ -218,7 +218,7 @@ class mge:
                                         (R**2 + (z/mge3d[i, 2])**2))
         return rst
 
-    def meanDensity(self, r):
+    def meanDensity_inte(self, r):
         '''
         Return the mean density at give spherical radius r
         r in pc, density in L_solar/pc^3
@@ -232,7 +232,7 @@ class mge:
         density = self.luminosityDensity(R, z)
         return np.average(density, axis=1)
 
-    def meanDensity_cir(self, r):
+    def meanDensity(self, r):
         '''
         Return the mean density at give spherical radius r
         r in pc, density in L_solar/pc^3
@@ -243,7 +243,7 @@ class mge:
         mge3d = self.deprojection()
         sigma = mge3d[:, 1]
         q = mge3d[:, 2]
-        lum = mge2d[:, 0]*TWO_PI*sigma**2 * q
+        lum = mge2d[:, 0]*TWO_PI*sigma**2 * mge2d[:, 2]
         rho = np.sum(lum * np.exp(-r**2/(2*sigma**2)) *
                      special.erf(r*np.sqrt(1-q**2)/(q*sigma*np.sqrt(2.0))) /
                      (FOUR_PI*sigma**2*r*np.sqrt(1-q**2)), axis=1)
