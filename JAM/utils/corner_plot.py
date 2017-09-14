@@ -1,4 +1,10 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# File              : JAM/utils/corner_plot.py
+# Author            : Hongyu Li <lhy88562189@gmail.com>
+# Date              : 14.09.2017
+# Last Modified Date: 14.09.2017
+# Last Modified By  : Hongyu Li <lhy88562189@gmail.com>
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -73,6 +79,9 @@ def hist2d(x, y, *args, **kwargs):
         except:
             level[i] = Hflat[0]
     level = level[::-1]
+    for i in range(len(level)-1):
+        if level[i] >= level[i+1]:
+            level[i+1] = level[i] * 1.0001
     # Z = np.meshgrid(X,Y)
     H = H.T
     ax.contour(H, extent=[extent[0][0], extent[0][1], extent[1][0],
@@ -109,7 +118,7 @@ def corner(xs, weights=None, labels=None, extents=None, truths=None,
     fig.subplots_adjust(left=lb, bottom=lb, right=tr, top=tr,
                         wspace=whspace, hspace=whspace)
     if extents is None:
-        extents = [[x.min(), x.max()] for x in xs]
+        extents = [np.percentile(x, [0.5, 99.5]) for x in xs]
         m = np.array([e[0] == e[1] for e in extents], dtype=bool)
         if np.any(m):
             raise ValueError(("It looks like the parameter(s) in column(s)"
