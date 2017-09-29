@@ -3,16 +3,16 @@
 # File              : JAM/utils/corner_plot.py
 # Author            : Hongyu Li <lhy88562189@gmail.com>
 # Date              : 14.09.2017
-# Last Modified Date: 14.09.2017
+# Last Modified Date: 29.09.2017
 # Last Modified By  : Hongyu Li <lhy88562189@gmail.com>
 
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
-from matplotlib import rc
+# from matplotlib import rc
 import util_fig
 from scipy.stats import gaussian_kde
-rc('mathtext', fontset='stix')
+# rc('mathtext', fontset='stix')
 sauron = util_fig.sauron
 ticks_font = util_fig.ticks_font
 text_font = util_fig.text_font

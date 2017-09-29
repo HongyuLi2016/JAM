@@ -1,14 +1,20 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# File              : velocity_plot.py
+# Author            : Hongyu Li <lhy88562189@gmail.com>
+# Date              : 16.09.2017
+# Last Modified Date: 29.09.2017
+# Last Modified By  : Hongyu Li <lhy88562189@gmail.com>
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 from matplotlib.ticker import MaxNLocator
 from scipy import stats
 from matplotlib import tri
-from matplotlib import rc
+# from matplotlib import rc
 from matplotlib.patches import Rectangle, Circle
 import util_fig
-rc('mathtext', fontset='stix')
+# rc('mathtext', fontset='stix')
 sauron = util_fig.sauron
 ticks_font = util_fig.ticks_font
 text_font = util_fig.text_font
@@ -45,7 +51,7 @@ def lhy_map(ax, x, y, vel, vmin=None, vmax=None,
     ax.plot(x, y, 'k.', markersize=markersize, alpha=1.)
 
 
-def velocity_plot(x0, y0, v, ax=None, cmap=sauron, norm=None,
+def velocity_plot(x0, y0, v, ax=None, cmap=None, norm=None,
                   equal=True, text=None, bar=True, fig=None,
                   barlabel='$\mathbf{km/s}$', barlabelSize='x-small',
                   shape='C', vmap='map', size=0.24, ncolors=64,
@@ -54,15 +60,19 @@ def velocity_plot(x0, y0, v, ax=None, cmap=sauron, norm=None,
         ax = plt.gca()
     if fig is None:
         fig = plt.gcf()
+    if cmap is None:
+        cmap = sauron
+    else:
+        cmap = plt.get_cmap(cmap)
     nans = np.isnan(v)
     vmin, vmax = stats.scoreatpercentile(v[~nans], [0.5, 99.5])
     if norm is None:
         norm = mpl.colors.Normalize(vmin=(vmin), vmax=(vmax))
     if vmap == 'dots':
         lhy_scatter(ax, x0, y0, c=v, size=size, norm=norm,
-                    cmap=sauron, shape=shape)
+                    cmap=cmap, shape=shape)
         lhy_scatter(ax, x0[nans], y0[nans], c=y0[nans]*0.0+vmax, size=size*0.8,
-                    norm=norm, cmap=sauron, shape=shape)
+                    norm=norm, cmap=cmap, shape=shape)
     elif vmap == 'map':
         lhy_map(ax, x0[~nans], y0[~nans], v[~nans], vmin=vmin, vmax=vmax,
                 ncolors=64, markersize=markersize, norm=norm, cmap=cmap)
@@ -81,5 +91,5 @@ def velocity_plot(x0, y0, v, ax=None, cmap=sauron, norm=None,
     util_fig.set_labels(ax)
 
     if bar is True:
-        util_fig.add_colorbar(ax, sauron, norm, position='right',
+        util_fig.add_colorbar(ax, cmap, norm, position='right',
                               barlabel=barlabel, barlabelSize=barlabelSize)

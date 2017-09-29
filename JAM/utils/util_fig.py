@@ -1,8 +1,17 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# File              : JAM/utils/util_fig.py
+# Author            : Hongyu Li <lhy88562189@gmail.com>
+# Date              : 29.09.2017
+# Last Modified Date: 29.09.2017
+# Last Modified By  : Hongyu Li <lhy88562189@gmail.com>
 import matplotlib as mpl
 from matplotlib import colors, colorbar
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import os
+# from matplotlib import rc
+# rc('mathtext', fontset='stix')
 JAMPATH = os.environ.get('JAMPATH')
 if JAMPATH is None:
     raise RuntimeError('Enviroment variable JAMPAHT must be set')
@@ -59,6 +68,19 @@ ticks_font1 =\
 label_font =\
     mpl.font_manager.FontProperties(fname='{}/utils/TimesNewRomanBold.ttf'
                                     .format(JAMPATH), size='large')
+
+
+nticks_font =\
+    mpl.font_manager.FontProperties(size='small')
+
+ntext_font =\
+    mpl.font_manager.FontProperties(size='large')
+
+nticks_font1 =\
+    mpl.font_manager.FontProperties(size='x-small')
+
+nlabel_font =\
+    mpl.font_manager.FontProperties(size='large')
 
 
 def set_labels(ax, x=True, y=True, xrotate=False,
